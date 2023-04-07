@@ -1,0 +1,27 @@
+# The `config` variable is defined when this file is parsed
+# pylint: disable=undefined-variable
+# pyright: reportUndefinedVariable=false
+
+from pathlib import Path
+
+import lit.formats
+
+config.name = "@PROJECT_NAME@"
+config.test_format = lit.formats.ShTest(True)
+
+config.test_source_root = "@CMAKE_CURRENT_SOURCE_DIR@"
+config.suffixes = [".ll", ".c", ".cpp"]
+
+tools_dir = Path("@LLVM_DIR@").parent / "bin"
+
+config.substitutions.append(
+    ("%FileCheck", f"{tools_dir}/FileCheck")
+)
+
+printer_plugin_path = Path("@PRINTER_PLUGIN_PATH@")
+if not printer_plugin_path.is_file():
+    print(f"Plugin not found: {printer_plugin_path}")
+    exit(1)
+config.substitutions.append(
+    ("%opt_printer", f"{tools_dir}/opt -load-pass-plugin={printer_plugin_path}")
+)
