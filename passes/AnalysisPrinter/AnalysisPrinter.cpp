@@ -1,3 +1,4 @@
+#include <Analysis/BasicBlockDistance.hpp>
 #include <Analysis/FunctionDistance.hpp>
 #include <Analysis/TargetDefinition.hpp>
 
@@ -51,6 +52,30 @@ public:
   }
 };
 
+class AFLGoBasicBlockDistancePrinterPass
+    : public PassInfoMixin<AFLGoBasicBlockDistancePrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit AFLGoBasicBlockDistancePrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
+    auto BBDistanceResult = MAM.getResult<AFLGoBasicBlockDistanceAnalysis>(M);
+
+    OS << "function_name,basic_block_name,distance\n";
+    for (auto &F : M) {
+      auto DistanceMap = BBDistanceResult.computeBBDistances(F);
+      for (auto [BB, Distance] : DistanceMap) {
+        OS << formatv("{0},", F.getName());
+        BB->printAsOperand(OS, false);
+        OS << formatv(",{0}\n", Distance);
+      }
+    }
+
+    return PreservedAnalyses::all();
+  }
+};
+
 llvm::PassPluginLibraryInfo getAFLGoAnalysisPrinterPluginInfo() {
   return {
       LLVM_PLUGIN_API_VERSION, "AFLGoAnalysisPrinter", LLVM_VERSION_STRING,
@@ -63,6 +88,9 @@ llvm::PassPluginLibraryInfo getAFLGoAnalysisPrinterPluginInfo() {
         PB.registerAnalysisRegistrationCallback([](ModuleAnalysisManager &MAM) {
           MAM.registerPass([] { return AFLGoFunctionDistanceAnalysis(); });
         });
+        PB.registerAnalysisRegistrationCallback([](ModuleAnalysisManager &MAM) {
+          MAM.registerPass([] { return AFLGoBasicBlockDistanceAnalysis(); });
+        });
 
         PB.registerPipelineParsingCallback(
             [](StringRef Name, ModulePassManager &MPM,
@@ -74,6 +102,11 @@ llvm::PassPluginLibraryInfo getAFLGoAnalysisPrinterPluginInfo() {
 
               if (Name == "print-aflgo-function-distance") {
                 MPM.addPass(AFLGoFunctionDistancePrinterPass(dbgs()));
+                return true;
+              }
+
+              if (Name == "print-aflgo-basic-block-distance") {
+                MPM.addPass(AFLGoBasicBlockDistancePrinterPass(dbgs()));
                 return true;
               }
 
