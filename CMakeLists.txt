@@ -15,6 +15,7 @@ endif()
 find_package(Python3 REQUIRED)
 
 set(PRINTER_PLUGIN_NAME AFLGoAnalysisPrinter)
+set(AFLGO_PLUGIN_NAME AFLGo)
 
 add_subdirectory(passes)
 

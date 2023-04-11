@@ -14,9 +14,7 @@ config.suffixes = [".ll", ".c", ".cpp"]
 
 tools_dir = Path("@LLVM_DIR@").parent / "bin"
 
-config.substitutions.append(
-    ("%FileCheck", f"{tools_dir}/FileCheck")
-)
+config.substitutions.append(("%FileCheck", f"{tools_dir}/FileCheck"))
 
 printer_plugin_path = Path("@PRINTER_PLUGIN_PATH@")
 if not printer_plugin_path.is_file():
@@ -24,4 +22,12 @@ if not printer_plugin_path.is_file():
     exit(1)
 config.substitutions.append(
     ("%opt_printer", f"{tools_dir}/opt -load-pass-plugin={printer_plugin_path}")
+)
+
+aflgo_plugin_path = Path("@AFLGO_PLUGIN_PATH@")
+if not aflgo_plugin_path.is_file():
+    print(f"Plugin not found: {aflgo_plugin_path}")
+    exit(1)
+config.substitutions.append(
+    ("%opt_aflgo", f"{tools_dir}/opt -load-pass-plugin={aflgo_plugin_path}")
 )
