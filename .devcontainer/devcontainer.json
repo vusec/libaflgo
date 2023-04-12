@@ -6,7 +6,10 @@
 	"build": { "dockerfile": "Dockerfile" },
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
+	"features": {
+    "ghcr.io/devcontainers/features/rust:1": {},
+		"ghcr.io/devcontainers/features/python:1": {}
+	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
@@ -20,9 +23,11 @@
 			"extensions": [
 				"llvm-vs-code-extensions.vscode-clangd",
 				"ms-vscode.cmake-tools",
-				"cheshirekow.cmake-format",
-				"ms-python.python"
-			]
+				"cheshirekow.cmake-format"
+			],
+			"settings": {
+				"clangd.path": "clangd-16"
+			}
 		}
 	}
 

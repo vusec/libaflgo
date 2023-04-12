@@ -15,4 +15,5 @@ RUN wget https://apt.llvm.org/llvm.sh && \
 		./llvm.sh 16 all && \
 		rm llvm.sh
 
-RUN python3 -m pip install lit==16
+RUN python3 -m pip install \
+				lit==16
