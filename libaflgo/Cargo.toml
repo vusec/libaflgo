@@ -1,0 +1,15 @@
+[package]
+name = "libaflgo"
+version = "0.1.0"
+authors = ["Elia Geretto <e.geretto@vu.nl"]
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0.160", features = ["derive"] }
+libafl = { git = "https://github.com/AFLplusplus/LibAFL.git" }
+libafl_targets = { git = "https://github.com/AFLplusplus/LibAFL.git", features = [
+	"sancov_pcguard_hitcounts",
+	"sancov_cmplog",
+	"libfuzzer",
+] }
+libaflgo_targets = { path = "../libaflgo_targets" }

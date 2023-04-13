@@ -1,0 +1,2 @@
+[workspace]
+members = ["libaflgo_targets", "libaflgo", "fuzzer"]
