@@ -12,12 +12,23 @@ if(NOT LLVM_FOUND)
   include(AddLLVM)
 endif()
 
+include(FetchContent)
+
+FetchContent_Declare(
+    Corrosion
+    GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
+    GIT_TAG v0.3.5
+)
+FetchContent_MakeAvailable(Corrosion)
+
 find_package(Python3 REQUIRED)
 
 set(PRINTER_PLUGIN_NAME AFLGoAnalysisPrinter)
-set(AFLGO_PLUGIN_NAME AFLGo)
+set(AFLGO_PLUGIN_NAME AFLGoLTOPlugin)
+set(FUZZER_NAME fuzzer_aflgo)
 
 add_subdirectory(passes)
+add_subdirectory(fuzzer)
 
 if(BUILD_TESTING)
   find_program(LIT_PROGRAM lit REQUIRED)

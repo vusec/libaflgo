@@ -1,5 +1,5 @@
 [package]
-name = "aflgo"
+name = "fuzzer_aflgo"
 version = "0.1.0"
 authors = ["Elia Geretto <e.geretto@vu.nl"]
 edition = "2021"
@@ -17,5 +17,4 @@ mimalloc = "0.1.36"
 nix = "0.26.2"
 
 [lib]
-name = "aflgo"
 crate-type = ["staticlib"]
