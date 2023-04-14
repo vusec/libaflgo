@@ -31,3 +31,18 @@ if not aflgo_plugin_path.is_file():
 config.substitutions.append(
     ("%opt_aflgo", f"{tools_dir}/opt -load-pass-plugin={aflgo_plugin_path}")
 )
+
+python_interpreter = Path("@Python3_EXECUTABLE@")
+assert python_interpreter.is_file()
+
+test_wrapper_path = Path("@TEST_WRAPPER_PATH@")
+if not test_wrapper_path.is_file():
+    print(f"Test wrapper not found: {test_wrapper_path}")
+    exit(1)
+
+config.substitutions.append(
+    (
+        "%libaflgo_cc_test",
+        f"AFLGO_CLANG={tools_dir}/clang {python_interpreter} {test_wrapper_path} -fno-discard-value-names",
+    )
+)

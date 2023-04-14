@@ -29,6 +29,7 @@ set(FUZZER_NAME fuzzer_aflgo)
 
 add_subdirectory(passes)
 add_subdirectory(fuzzer)
+add_subdirectory(wrapper)
 
 if(BUILD_TESTING)
   find_program(LIT_PROGRAM lit REQUIRED)

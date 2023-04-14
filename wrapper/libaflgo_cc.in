@@ -1,0 +1,251 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import subprocess
+import re
+from pathlib import Path
+
+# The list of immediate args has been taken from Driver::HandleImmediateArgs
+IMMEDIATE_ARGS = [
+    "-dumpmachine",
+    "-dumpversion",
+    "--print-diagnostic-categories",
+    "-help",
+    "--help-hidden",
+    "--version",
+    "-print-resource-dir",
+    "-print-search-dirs",
+    "-print-file-name",
+    "-print-prog-name",
+    "-autocomplete",
+    "-print-libgcc-file-name",
+    "-print-multi-lib",
+    "-print-multi-directory",
+    "-print-target-triple",
+    "-print-effective-triple",
+    "-print-targets",
+]
+
+# The phase arguments have been taken from Driver::getFinalPhase
+PREPROCESSOR_ARGS = ["-E", "-M", "-MM"]
+
+PRECOMPILATION_ARGS = ["--precompile"]
+
+COMPILATION_ARGS = [
+    "-fsyntax-only",
+    "-print-supported-cpus",
+    "-module-file-info",
+    "-verify-pch",
+    "-rewrite-objc",
+    "-rewrite-legacy-objc",
+    "--migrate",
+    "--analyze",
+    "-emit-ast",
+]
+
+BACKEND_ARGS = ["-S"]
+
+ASSEMBLER_ARGS = ["-c"]
+
+
+def is_linking(args):
+    for arg in args:
+        arg_name = arg.split("=")[0]
+        if (
+            arg_name in IMMEDIATE_ARGS
+            or arg_name in PREPROCESSOR_ARGS
+            or arg_name in PRECOMPILATION_ARGS
+            or arg_name in COMPILATION_ARGS
+            or arg_name in BACKEND_ARGS
+            or arg_name in ASSEMBLER_ARGS
+        ):
+            return False
+
+    return True
+
+
+SHARED_ARGS = ["-shared"]
+
+
+def is_shared(args):
+    for arg in args:
+        if arg in SHARED_ARGS:
+            return True
+    return False
+
+
+AFLGO_PLUGIN_PATH = Path("@AFLGO_PLUGIN_PATH@")
+FUZZER_PATH = Path("@FUZZER_PATH@")
+
+
+def check_resource(resource_file):
+    if not resource_file.is_file():
+        print(f"Resource not found: {resource_file}")
+        exit(1)
+
+
+def check_resources():
+    resources = [
+        AFLGO_PLUGIN_PATH,
+        FUZZER_PATH,
+    ]
+
+    for resource in resources:
+        check_resource(resource)
+
+
+# The flags that match the following regular expressions should not be forwarded
+ORIGINAL_FLAGS_BLACKLIST = []
+
+# These flags should be injected always when compiling at the beginning of the
+# compiler invocation
+COMPILER_FLAGS_EARLY = []
+
+# These flags should be injected always when compiling
+COMPILER_FLAGS = [
+    "-g",  # required for targeting
+    "-flto",
+    "-fsanitize-coverage=trace-pc-guard",
+]
+
+# These flags should be used always when compiling C++ code
+COMPILER_CXX_FLAGS = []
+
+# These flags should be used always when linking
+LINKER_FORWARD_FLAGS = [
+    f"--load-pass-plugin={AFLGO_PLUGIN_PATH}",
+    f"-mllvm=-load={AFLGO_PLUGIN_PATH}",
+]
+LINKER_FLAGS = [
+    "-fuse-ld=lld",
+]
+
+
+def generate_linker_flags(targets):
+    linker_forward_flags = LINKER_FORWARD_FLAGS[:]
+    linker_forward_flags += [f"-mllvm=-targets={targets}"]
+
+    flags = LINKER_FLAGS[:]
+    flags.append(f"-Wl,{','.join(linker_forward_flags)}")
+
+    return flags
+
+
+# These flags should be used when linking C++ code
+LINKER_CXX_FLAGS = []
+
+# These flags should be used when linking executables, but not shared libraries
+EXE_LINKER_FLAGS = [
+    f"-Wl,--whole-archive,{FUZZER_PATH},--no-whole-archive",
+    "-lpthread",
+    "-lrt",
+    "-lm",
+    "-ldl",
+]
+
+
+def get_targets_path():
+    try:
+        targets_path = Path(os.environ["AFLGO_TARGETS"])
+    except KeyError:
+        print("AFLGO_TARGETS not set")
+        exit(1)
+
+    if not targets_path.is_file():
+        print(f"targets file not found: {targets_path}")
+        exit(1)
+
+    return targets_path
+
+
+def get_clang():
+    return os.environ.get("AFLGO_CLANG", "clang")
+
+
+def wrapper_main(argv):
+    cpp_mode = sys.argv[0].endswith("_cxx")
+
+    targets_path = get_targets_path()
+
+    clang = get_clang()
+    command = clang if not cpp_mode else f"{clang}++"
+
+    original_args = []
+    for flag in sys.argv[1:]:
+        blacklisted = False
+        for blacklisted_regex in ORIGINAL_FLAGS_BLACKLIST:
+            if blacklisted_regex.fullmatch(flag) is not None:
+                blacklisted = True
+
+        if not blacklisted:
+            original_args.append(flag)
+        else:
+            print(f"warning: ignored blacklisted flag: {flag}")
+
+    cmdline = [command] + COMPILER_FLAGS_EARLY + original_args + COMPILER_FLAGS
+    if cpp_mode:
+        cmdline += COMPILER_CXX_FLAGS
+
+    if is_linking(original_args):
+        cmdline += generate_linker_flags(targets_path)
+        if cpp_mode:
+            cmdline += LINKER_CXX_FLAGS
+
+        # This check is performed in collectSanitizerRuntimes for sanitizers.
+        if not is_shared(original_args):
+            cmdline += EXE_LINKER_FLAGS
+
+    try:
+        subprocess.run(cmdline, check=True)
+    except subprocess.CalledProcessError as ex:
+        print(f"real compiler invocation: {' '.join(cmdline)}", file=sys.stderr)
+        exit(ex.returncode)
+
+
+def flags_main(args):
+    cpp_mode = sys.argv[0].endswith("++")
+
+    targets_path = get_targets_path()
+
+    if args.compiler:
+        compiler_flags = COMPILER_FLAGS_EARLY + COMPILER_FLAGS
+
+        if cpp_mode:
+            compiler_flags += COMPILER_CXX_FLAGS
+
+        print(" ".join(compiler_flags))
+
+    elif args.linker:
+        linker_flags = generate_linker_flags(targets_path)
+        if cpp_mode:
+            linker_flags += LINKER_CXX_FLAGS()
+
+        if not args.lib:
+            linker_flags += EXE_LINKER_FLAGS
+
+        print(" ".join(linker_flags))
+
+    else:
+        raise ValueError("missing flag")
+
+
+if __name__ == "__main__":
+    from argparse import ArgumentParser
+
+    check_resources()
+
+    parser = ArgumentParser()
+    flags_arg = parser.add_argument("--flags", action="store_true", required=True)
+
+    if flags_arg.option_strings[0] in sys.argv:
+        group = parser.add_mutually_exclusive_group(required=True)
+        group.add_argument("--compiler", action="store_true")
+        group.add_argument("--linker", action="store_true")
+
+        parser.add_argument("--lib", action="store_true")
+        args = parser.parse_args()
+
+        flags_main(args)
+    else:
+        wrapper_main(sys.argv)

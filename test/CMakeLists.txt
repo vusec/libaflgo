@@ -1,7 +1,8 @@
 set(PRINTER_PLUGIN_PATH $<TARGET_FILE:${PRINTER_PLUGIN_NAME}>)
 set(AFLGO_PLUGIN_PATH $<TARGET_FILE:${AFLGO_PLUGIN_NAME}>)
+set(TEST_WRAPPER_PATH ${${PROJECT_NAME}_WRAPPER_PATH})
 
-set(PLUGINS ${AFLGO_PLUGIN_NAME} ${PRINTER_PLUGIN_NAME})
+set(TEST_DEPS ${AFLGO_PLUGIN_NAME} ${PRINTER_PLUGIN_NAME} ${TEST_WRAPPER_PATH})
 
 configure_file(lit.cfg.in lit.cfg.gen @ONLY)
 file(
@@ -12,7 +13,7 @@ file(
 add_custom_target(
   ${PROJECT_NAME}-check
   COMMAND ${LIT_PROGRAM} ${CMAKE_CURRENT_BINARY_DIR} -sv
-  DEPENDS ${PLUGINS})
+  DEPENDS ${TEST_DEPS})
 
 if(NOT TARGET check)
   # This target may have been created by the parent project
