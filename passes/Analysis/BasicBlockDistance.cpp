@@ -44,11 +44,13 @@ AFLGoBasicBlockDistanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
 
       CallBase *CallInst = cast<CallBase>(CallInstOpt.value());
       auto *CalledFunction = CallInst->getCalledFunction();
-      auto *CallBB = CallInst->getParent();
+      if (FunctionDistances.find(CalledFunction) == FunctionDistances.end()) {
+        continue;
+      }
+      auto CallBBDistance = (FunctionDistances[CalledFunction] + 1) *
+                            FunctionDistanceMagnificationFactor;
 
-      auto CallBBDistance =
-          (FunctionDistances.find(CalledFunction)->getSecond() + 1) *
-          FunctionDistanceMagnificationFactor;
+      auto *CallBB = CallInst->getParent();
       if (OriginBBs.find(CallBB) != OriginBBs.end()) {
         // When multiple calls appear in the same basic block, keep the one that
         // generates the minimum distance.
