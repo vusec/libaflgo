@@ -3,22 +3,20 @@ use mimalloc::MiMalloc;
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
-use core::{cell::RefCell, time::Duration};
-#[cfg(unix)]
-use std::os::unix::io::{AsRawFd, FromRawFd};
 use std::{
+    cell::RefCell,
     env,
     fs::{self, File, OpenOptions},
     io::{self, Read, Write},
     path::{Path, PathBuf},
     process::{self, exit},
+    time::Duration,
 };
 
 use clap::{Parser, ValueEnum};
 use libafl::{
     bolts::{
         current_nanos, current_time,
-        os::dup2,
         rands::StdRand,
         shmem::{ShMemProvider, StdShMemProvider},
         tuples::{tuple_list, Merge},
@@ -47,8 +45,6 @@ use libafl_targets::autotokens;
 use libafl_targets::{
     libfuzzer_initialize, libfuzzer_test_one_input, std_edges_map_observer, CmpLogObserver,
 };
-#[cfg(unix)]
-use nix::{self, unistd::dup};
 
 use libaflgo::{CoolingSchedule, DistanceFeedback, DistanceObserver, DistancePowerMutationalStage};
 
@@ -151,7 +147,7 @@ pub fn libafl_main() {
         return;
     }
 
-    fuzz(
+    if let Err(error) = fuzz(
         out_dir.join("queue"),
         out_dir.join("crashes"),
         in_dir,
@@ -160,8 +156,9 @@ pub fn libafl_main() {
         Duration::from_millis(args.timeout),
         args.cooling_schedule.0,
         Duration::from_secs(args.time_to_exploit * 60),
-    )
-    .expect("An error occurred while fuzzing");
+    ) {
+        panic!("An error occurred while fuzzing: {error}");
+    }
 }
 
 fn run_testcases(filenames: &[impl AsRef<Path>]) {
@@ -206,21 +203,9 @@ fn fuzz<P: AsRef<Path>>(
             .open(logfile.as_ref())?,
     );
 
-    #[cfg(unix)]
-    let mut stdout_cpy = unsafe {
-        let new_fd = dup(io::stdout().as_raw_fd())?;
-        File::from_raw_fd(new_fd)
-    };
-    #[cfg(unix)]
-    let file_null = File::open("/dev/null")?;
-
-    // 'While the monitor are state, they are usually used in the broker - which is likely never restarted
+    // While the monitor are state, they are usually used in the broker - which is likely never restarted
     let monitor = SimpleMonitor::new(|s| {
-        #[cfg(unix)]
-        writeln!(&mut stdout_cpy, "{s}").unwrap();
-        #[cfg(windows)]
         println!("{s}");
-
         writeln!(log.borrow_mut(), "{:?} {s}", current_time()).unwrap();
     });
 
@@ -398,21 +383,6 @@ fn fuzz<P: AsRef<Path>>(
             });
         println!("We imported {} inputs from disk.", state.corpus().count());
     }
-
-    // Remove target ouput (logs still survive)
-    #[cfg(unix)]
-    {
-        let null_fd = file_null.as_raw_fd();
-        dup2(null_fd, io::stdout().as_raw_fd())?;
-        dup2(null_fd, io::stderr().as_raw_fd())?;
-    }
-    // reopen file to make sure we're at the end
-    log.replace(
-        OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(logfile.as_ref())?,
-    );
 
     fuzzer.fuzz_loop(&mut stages, &mut executor, &mut state, &mut mgr)?;
 
