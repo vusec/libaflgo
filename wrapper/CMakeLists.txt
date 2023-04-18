@@ -28,13 +28,18 @@ if(BUILD_TESTING)
   # target.
   set(FUZZER_PATH "$<TARGET_FILE:${FUZZER_NAME}-static>")
 
-	configure_file(libaflgo_cc.in libaflgo_cc_test.gen @ONLY)
+  configure_file(libaflgo_cc.in libaflgo_cc_test.gen @ONLY)
   file(
     GENERATE
     OUTPUT libaflgo_cc_test
     INPUT "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cc_test.gen")
+  file(COPY_FILE "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cc_test"
+       "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cxx_test")
 
-  set(${PROJECT_NAME}_WRAPPER_PATH
+  set(${PROJECT_NAME}_CC_WRAPPER_PATH
       "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cc_test"
+      CACHE INTERNAL "")
+  set(${PROJECT_NAME}_CXX_WRAPPER_PATH
+      "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cxx_test"
       CACHE INTERNAL "")
 endif()
