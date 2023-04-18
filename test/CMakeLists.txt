@@ -21,3 +21,10 @@ if(NOT TARGET check)
   add_custom_target(check)
 endif()
 add_dependencies(check ${PROJECT_NAME}-check)
+
+add_custom_command(
+  TARGET check
+  PRE_BUILD
+  COMMAND cargo test
+  USES_TERMINAL
+  COMMENT "Running Rust tests")
