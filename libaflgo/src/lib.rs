@@ -130,27 +130,33 @@ impl<S: UsesInput + HasClientPerfMonitor + HasMetadata> Feedback<S> for Distance
 
         let distance_metadata = state.metadata_mut::<DistanceMetadata>().unwrap();
         distance_metadata.update_runtime();
-        if distance_metadata.update(cur_distance) {
-            let min_distance = distance_metadata.min_distance().unwrap();
-            let max_distance = distance_metadata.max_distance().unwrap();
+        if !distance_metadata.is_within_range(cur_distance) {
+            // This reports the existing distance range, without including the
+            // current test case since it is not yet known if it will be
+            // inserted in the queue.
 
-            manager.fire(
-                state,
-                Event::UpdateUserStats {
-                    name: self.name.clone() + "_min",
-                    value: UserStats::Float(min_distance),
-                    phantom: PhantomData,
-                },
-            )?;
+            let min_distance = distance_metadata.min_distance();
+            let max_distance = distance_metadata.max_distance();
 
-            manager.fire(
-                state,
-                Event::UpdateUserStats {
-                    name: self.name.clone() + "_max",
-                    value: UserStats::Float(max_distance),
-                    phantom: PhantomData,
-                },
-            )?;
+            if let (Some(min_distance), Some(max_distance)) = (min_distance, max_distance) {
+                manager.fire(
+                    state,
+                    Event::UpdateUserStats {
+                        name: self.name.clone() + "_min",
+                        value: UserStats::Float(min_distance),
+                        phantom: PhantomData,
+                    },
+                )?;
+
+                manager.fire(
+                    state,
+                    Event::UpdateUserStats {
+                        name: self.name.clone() + "_max",
+                        value: UserStats::Float(max_distance),
+                        phantom: PhantomData,
+                    },
+                )?;
+            }
         }
 
         Ok(false)
@@ -158,7 +164,7 @@ impl<S: UsesInput + HasClientPerfMonitor + HasMetadata> Feedback<S> for Distance
 
     fn append_metadata<OT>(
         &mut self,
-        _state: &mut S,
+        state: &mut S,
         _observers: &OT,
         testcase: &mut Testcase<S::Input>,
     ) -> Result<(), libafl::Error>
@@ -169,6 +175,9 @@ impl<S: UsesInput + HasClientPerfMonitor + HasMetadata> Feedback<S> for Distance
             .distance
             .ok_or_else(|| Error::empty_optional("distance was not set".to_string()))?;
         testcase.add_metadata(DistanceTestcaseMetadata::new(cur_distance));
+
+        let distance_metadata = state.metadata_mut::<DistanceMetadata>().unwrap();
+        distance_metadata.update_range(cur_distance);
 
         self.distance = None;
         Ok(())
@@ -229,20 +238,16 @@ impl DistanceMetadata {
         }
     }
 
-    pub fn update(&mut self, cur_distance: f64) -> bool {
-        let old_min_distance = self.min_distance;
-        let old_max_distance = self.max_distance;
-
+    pub fn update_range(&mut self, cur_distance: f64) {
         self.min_distance = Some(self.min_distance.unwrap_or(cur_distance).min(cur_distance));
         self.max_distance = Some(self.max_distance.unwrap_or(cur_distance).max(cur_distance));
+    }
 
-        if let (Some(old_min_distance), Some(old_max_distance)) =
-            (old_min_distance, old_max_distance)
-        {
-            old_min_distance != self.min_distance.unwrap()
-                || old_max_distance != self.max_distance.unwrap()
+    pub fn is_within_range(&mut self, cur_distance: f64) -> bool {
+        if let (Some(min_distance), Some(max_distance)) = (self.min_distance, self.max_distance) {
+            min_distance <= cur_distance && cur_distance <= max_distance
         } else {
-            true
+            false
         }
     }
 
