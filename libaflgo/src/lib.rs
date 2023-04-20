@@ -1,11 +1,15 @@
-use std::time::{Duration, Instant};
+use std::{
+    marker::PhantomData,
+    time::{Duration, Instant},
+};
 
 use libaflgo_targets::{compute_test_case_distance, reset_distance_stats};
 
 use libafl::{
     impl_serdeany,
     prelude::{
-        EventFirer, ExitKind, Feedback, Named, Observer, ObserversTuple, Testcase, UsesInput,
+        Event, EventFirer, ExitKind, Feedback, Named, Observer, ObserversTuple, Testcase,
+        UserStats, UsesInput,
     },
     schedulers::{testcase_score::CorpusPowerTestcaseScore, TestcaseScore},
     stages::PowerMutationalStage,
@@ -104,8 +108,8 @@ impl<S: UsesInput + HasClientPerfMonitor + HasMetadata> Feedback<S> for Distance
 
     fn is_interesting<EM, OT>(
         &mut self,
-        _state: &mut S,
-        _manager: &mut EM,
+        state: &mut S,
+        manager: &mut EM,
         _input: &S::Input,
         observers: &OT,
         _exit_kind: &ExitKind,
@@ -119,13 +123,42 @@ impl<S: UsesInput + HasClientPerfMonitor + HasMetadata> Feedback<S> for Distance
             .ok_or_else(|| {
                 libafl::Error::key_not_found("DistanceObserver not found".to_string())
             })?;
-        self.distance = distance_observer.distance();
+        let cur_distance = distance_observer
+            .distance()
+            .ok_or_else(|| Error::empty_optional("distance was not set in observer".to_string()))?;
+        self.distance = Some(cur_distance);
+
+        let distance_metadata = state.metadata_mut::<DistanceMetadata>().unwrap();
+        distance_metadata.update_runtime();
+        if distance_metadata.update(cur_distance) {
+            let min_distance = distance_metadata.min_distance().unwrap();
+            let max_distance = distance_metadata.max_distance().unwrap();
+
+            manager.fire(
+                state,
+                Event::UpdateUserStats {
+                    name: self.name.clone() + "_min",
+                    value: UserStats::Float(min_distance),
+                    phantom: PhantomData,
+                },
+            )?;
+
+            manager.fire(
+                state,
+                Event::UpdateUserStats {
+                    name: self.name.clone() + "_max",
+                    value: UserStats::Float(max_distance),
+                    phantom: PhantomData,
+                },
+            )?;
+        }
+
         Ok(false)
     }
 
     fn append_metadata<OT>(
         &mut self,
-        state: &mut S,
+        _state: &mut S,
         _observers: &OT,
         testcase: &mut Testcase<S::Input>,
     ) -> Result<(), libafl::Error>
@@ -137,18 +170,11 @@ impl<S: UsesInput + HasClientPerfMonitor + HasMetadata> Feedback<S> for Distance
             .ok_or_else(|| Error::empty_optional("distance was not set".to_string()))?;
         testcase.add_metadata(DistanceTestcaseMetadata::new(cur_distance));
 
-        let distance_metadata = state.metadata_mut::<DistanceMetadata>().unwrap();
-        distance_metadata.update(cur_distance);
-        distance_metadata.update_runtime();
-
         self.distance = None;
         Ok(())
     }
 
-    fn discard_metadata(&mut self, state: &mut S, _input: &S::Input) -> Result<(), libafl::Error> {
-        let distance_metadata = state.metadata_mut::<DistanceMetadata>().unwrap();
-        distance_metadata.update_runtime();
-
+    fn discard_metadata(&mut self, _state: &mut S, _input: &S::Input) -> Result<(), libafl::Error> {
         self.distance = None;
         Ok(())
     }
@@ -203,9 +229,21 @@ impl DistanceMetadata {
         }
     }
 
-    pub fn update(&mut self, cur_distance: f64) {
+    pub fn update(&mut self, cur_distance: f64) -> bool {
+        let old_min_distance = self.min_distance;
+        let old_max_distance = self.max_distance;
+
         self.min_distance = Some(self.min_distance.unwrap_or(cur_distance).min(cur_distance));
         self.max_distance = Some(self.max_distance.unwrap_or(cur_distance).max(cur_distance));
+
+        if let (Some(old_min_distance), Some(old_max_distance)) =
+            (old_min_distance, old_max_distance)
+        {
+            old_min_distance != self.min_distance.unwrap()
+                || old_max_distance != self.max_distance.unwrap()
+        } else {
+            true
+        }
     }
 
     #[must_use]
@@ -234,6 +272,14 @@ impl DistanceMetadata {
     #[must_use]
     pub fn progress_to_exploit(&self) -> f64 {
         self.time_to_exploit.as_secs_f64() / self.runtime.as_secs_f64()
+    }
+
+    pub fn min_distance(&self) -> Option<f64> {
+        self.min_distance
+    }
+
+    pub fn max_distance(&self) -> Option<f64> {
+        self.max_distance
     }
 }
 

@@ -204,10 +204,13 @@ fn fuzz<P: AsRef<Path>>(
     );
 
     // While the monitor are state, they are usually used in the broker - which is likely never restarted
-    let monitor = SimpleMonitor::new(|s| {
-        println!("{s}");
-        writeln!(log.borrow_mut(), "{:?} {s}", current_time()).unwrap();
-    });
+    let monitor = SimpleMonitor::with_user_monitor(
+        |s| {
+            println!("{s}");
+            writeln!(log.borrow_mut(), "{:?} {s}", current_time()).unwrap();
+        },
+        true,
+    );
 
     // We need a shared map to store our state before a crash.
     // This way, we are able to continue fuzzing afterwards.
