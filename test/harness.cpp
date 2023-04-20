@@ -1,6 +1,6 @@
 // RUN: echo 'test/harness.cpp:39' > %t.targets.txt
 // RUN: AFLGO_TARGETS=%t.targets.txt %libaflgo_cxx_test %s -o %t -Wl,-save-temps
-// RUN: llvm-dis-16 %t.0.5.precodegen.bc
+// RUN: %llvm-dis %t.0.5.precodegen.bc
 // RUN: cat %t.0.5.precodegen.ll | %FileCheck %s
 
 #include <cstdint>

@@ -1,5 +1,6 @@
-// RUN: echo 'test/harness.c:17' > %t.targets.txt
-// RUN: AFLGO_TARGETS=%t.targets.txt %libaflgo_cc_test %s -o %t
+// RUN: echo 'test/harness-run.c:17' > %t.targets.txt
+// RUN: AFLGO_TARGETS=%t.targets.txt %libaflgo_cc_test %s -o %t -Wl,-save-temps
+// RUN: %llvm-dis %t.0.5.precodegen.bc
 // RUN: mkdir -p %t.input
 // RUN: echo 'yolo' > %t.input/yolo.txt
 // RUN: rm -rf %t.output
