@@ -255,6 +255,10 @@ impl DistanceMetadata {
     pub fn normalize(&self, cur_distance: f64) -> Option<f64> {
         let min_distance = self.min_distance?;
         let max_distance = self.max_distance?;
+        if min_distance == max_distance {
+            return None;
+        }
+
         Some((cur_distance - min_distance) / (max_distance - min_distance))
     }
 
@@ -321,34 +325,39 @@ where
     fn compute(entry: &mut Testcase<<S>::Input>, state: &S) -> Result<f64, libafl::Error> {
         let mut perf_score = CorpusPowerTestcaseScore::compute(entry, state)?;
 
-        let distance_metadata = state.metadata::<DistanceMetadata>()?;
-        if let Some(schedule) = distance_metadata.schedule() {
-            let progress_to_exploit = distance_metadata.progress_to_exploit();
-
-            let t_schedule = match schedule {
-                CoolingSchedule::Exponential => 1.0 / 20.0_f64.powf(progress_to_exploit),
-                CoolingSchedule::Logarithmic => {
-                    let alpha = f64::exp(19.0 / 2.0);
-                    1.0 / (1.0 + 2.0 * f64::ln(1.0 + progress_to_exploit * alpha))
-                }
-                CoolingSchedule::Linear => 1.0 / (1.0 + 19.0 * progress_to_exploit),
-                CoolingSchedule::Quadratic => 1.0 / (1.0 + 19.0 * progress_to_exploit.powf(2.0)),
-            };
-
-            let test_case_metadata = entry.metadata::<DistanceTestcaseMetadata>()?;
-            if let Some(norm_distance) = distance_metadata.normalize(test_case_metadata.distance())
-            {
-                let p = (1.0 - norm_distance) * (1.0 - t_schedule) + 0.5 * t_schedule;
-                let power_factor = 2.0_f64.powf(2.0 * f64::log2(MAX_FACTOR) * (p - 0.5));
-                perf_score *= power_factor;
-            }
+        let test_case_metadata = entry.metadata::<DistanceTestcaseMetadata>()?;
+        let test_case_distance = test_case_metadata.distance();
+        if !test_case_distance.is_finite() {
+            // If the distance from the target is unknown, fall back to AFL-like scheduling.
+            return Ok(perf_score);
         }
+
+        let distance_metadata = state.metadata::<DistanceMetadata>()?;
+
+        let Some(schedule) = distance_metadata.schedule() else { return Ok(perf_score); };
+        let progress_to_exploit = distance_metadata.progress_to_exploit();
+        let t_schedule = match schedule {
+            CoolingSchedule::Exponential => 1.0 / 20.0_f64.powf(progress_to_exploit),
+            CoolingSchedule::Logarithmic => {
+                let alpha = f64::exp(19.0 / 2.0);
+                1.0 / (1.0 + 2.0 * f64::ln(1.0 + progress_to_exploit * alpha))
+            }
+            CoolingSchedule::Linear => 1.0 / (1.0 + 19.0 * progress_to_exploit),
+            CoolingSchedule::Quadratic => 1.0 / (1.0 + 19.0 * progress_to_exploit.powf(2.0)),
+        };
+
+        let Some(norm_distance) = distance_metadata.normalize(test_case_distance) else { return Ok(perf_score); };
+
+        let p = (1.0 - norm_distance) * (1.0 - t_schedule) + 0.5 * t_schedule;
+        let power_factor = 2.0_f64.powf(2.0 * f64::log2(MAX_FACTOR) * (p - 0.5));
+        perf_score *= power_factor;
 
         // Check upper bound again
         if perf_score > HAVOC_MAX_MULT * 100.0 {
             perf_score = HAVOC_MAX_MULT * 100.0;
         }
 
+        assert!(perf_score.is_finite());
         Ok(perf_score)
     }
 }
