@@ -42,7 +42,7 @@ private:
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   std::unique_ptr<Base> B = nullptr;
-  if (Size > 5) {
+  if (Size > 0 && Data[0] > 128) {
     B = std::make_unique<Sub1>();
   } else {
     B = std::make_unique<Sub2>();
