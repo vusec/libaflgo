@@ -1,4 +1,4 @@
-// RUN: echo 'test/harness-run.c:17' > %t.targets.txt
+// RUN: echo 'test/harness-min-max.c:28' > %t.targets.txt
 // RUN: AFLGO_TARGETS=%t.targets.txt %libaflgo_cc_test %s -o %t -Wl,-save-temps
 // RUN: %llvm-dis %t.0.5.precodegen.bc
 // RUN: mkdir -p %t.input
@@ -12,13 +12,24 @@
 
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   int V = 0;
-  if (Size > 5) {
-    V = 1;
+  if (Data[0] > 100) {
+    if (Data[0] > 200) {
+      V = 1;
+    } else {
+      V = 3;
+    }
   } else {
     V = 2;
   }
 
-  return V;
+  int E = 1;
+  if (Data[1] > 100) {
+    if (Data[1] > 200) {
+      E = 2;
+    }
+  }
+
+  return V + E;
 }
 
 // CHECK: Let's fuzz :)
