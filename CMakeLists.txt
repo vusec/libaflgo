@@ -5,7 +5,7 @@ project(AFLGoNew)
 include(GNUInstallDirs)
 
 if(NOT LLVM_FOUND)
-  find_package(LLVM REQUIRED CONFIG)
+  find_package(LLVM 16 REQUIRED CONFIG)
   message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
   message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
   list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
