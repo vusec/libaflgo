@@ -328,8 +328,8 @@ impl<S> TestcaseScore<S> for DistancePowerTestcaseScore
 where
     S: HasCorpus + HasMetadata + HasNamedMetadata,
 {
-    fn compute(entry: &mut Testcase<<S>::Input>, state: &S) -> Result<f64, libafl::Error> {
-        let mut perf_score = CorpusPowerTestcaseScore::compute(entry, state)?;
+    fn compute(state: &S, entry: &mut Testcase<<S>::Input>) -> Result<f64, libafl::Error> {
+        let mut perf_score = CorpusPowerTestcaseScore::compute(state, entry)?;
 
         let test_case_metadata = entry.metadata::<DistanceTestcaseMetadata>()?;
         let test_case_distance = test_case_metadata.distance();
