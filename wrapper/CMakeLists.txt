@@ -33,8 +33,13 @@ if(BUILD_TESTING)
     GENERATE
     OUTPUT libaflgo_cc_test
     INPUT "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cc_test.gen")
-  file(COPY_FILE "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cc_test"
-       "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cxx_test")
+  add_custom_target(build_libaflgo_cxx_test ALL
+    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cxx_test")
+  add_custom_command(
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cxx_test"
+    COMMAND ${CMAKE_COMMAND} -E copy
+            "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cc_test"
+            "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cxx_test")
 
   set(${PROJECT_NAME}_CC_WRAPPER_PATH
       "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cc_test"
