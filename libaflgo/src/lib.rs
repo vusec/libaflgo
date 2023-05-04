@@ -1,15 +1,12 @@
-use std::{
-    marker::PhantomData,
-    time::{Duration, Instant},
-};
+use std::{marker::PhantomData, time::Duration};
 
 use libaflgo_targets::{compute_test_case_distance, reset_distance_stats};
 
 use libafl::{
     impl_serdeany,
     prelude::{
-        Event, EventFirer, ExitKind, Feedback, Named, Observer, ObserversTuple, Testcase,
-        UserStats, UsesInput,
+        current_time, Event, EventFirer, ExitKind, Feedback, Named, Observer, ObserversTuple,
+        Testcase, UserStats, UsesInput,
     },
     schedulers::{testcase_score::CorpusPowerTestcaseScore, TestcaseScore},
     stages::PowerMutationalStage,
@@ -129,7 +126,6 @@ impl<S: UsesInput + HasClientPerfMonitor + HasMetadata> Feedback<S> for Distance
         self.distance = Some(cur_distance);
 
         let distance_metadata = state.metadata_mut::<DistanceMetadata>().unwrap();
-        distance_metadata.update_runtime();
         if !distance_metadata.is_interesting(cur_distance) {
             return Ok(false);
         }
@@ -209,11 +205,7 @@ pub enum CoolingSchedule {
 pub struct DistanceMetadata {
     schedule: Option<CoolingSchedule>,
 
-    // Incrementally increasing runtime is necessary to preserve correctness
-    // across restarts.
-    #[serde(skip)]
-    last_update: Option<Instant>,
-    runtime: Duration,
+    campaign_start: Duration,
     time_to_exploit: Duration,
 
     min_distance: Option<f64>,
@@ -222,19 +214,10 @@ pub struct DistanceMetadata {
 
 impl DistanceMetadata {
     #[must_use]
-    pub fn new() -> Self {
-        Self {
-            last_update: Some(Instant::now()),
-            ..Default::default()
-        }
-    }
-
-    #[must_use]
     pub fn with_schedule(schedule: Option<CoolingSchedule>, time_to_exploit: Duration) -> Self {
         Self {
             schedule,
-            last_update: Some(Instant::now()),
-            runtime: Duration::ZERO,
+            campaign_start: current_time(),
             time_to_exploit,
             ..Default::default()
         }
@@ -273,20 +256,10 @@ impl DistanceMetadata {
         self.schedule.as_ref()
     }
 
-    fn update_runtime(&mut self) {
-        let time_since_last_update = if let Some(last_update) = self.last_update {
-            last_update.elapsed()
-        } else {
-            // After a restart
-            Duration::ZERO
-        };
-        self.runtime += time_since_last_update;
-        self.last_update = Some(Instant::now());
-    }
-
     #[must_use]
     pub fn progress_to_exploit(&self) -> f64 {
-        self.time_to_exploit.as_secs_f64() / self.runtime.as_secs_f64()
+        let runtime = current_time() - self.campaign_start;
+        self.time_to_exploit.as_secs_f64() / runtime.as_secs_f64()
     }
 
     pub fn min_distance(&self) -> Option<f64> {
