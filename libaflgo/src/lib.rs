@@ -259,7 +259,7 @@ impl DistanceMetadata {
     #[must_use]
     pub fn progress_to_exploit(&self) -> f64 {
         let runtime = current_time() - self.campaign_start;
-        self.time_to_exploit.as_secs_f64() / runtime.as_secs_f64()
+        runtime.as_secs_f64() / self.time_to_exploit.as_secs_f64()
     }
 
     pub fn min_distance(&self) -> Option<f64> {
