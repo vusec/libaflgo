@@ -159,8 +159,8 @@ def get_targets_path():
     return targets_path
 
 
-def get_clang():
-    return os.environ.get("AFLGO_CLANG", "clang")
+def get_clang() -> Path:
+    return Path(os.environ.get("AFLGO_CLANG", "clang"))
 
 
 def wrapper_main(argv):
@@ -169,7 +169,8 @@ def wrapper_main(argv):
     targets_path = get_targets_path()
 
     clang = get_clang()
-    command = clang if not cpp_mode else clang.replace("clang", "clang++")
+    command = clang if not cpp_mode else clang.with_name(
+        clang.name.replace("clang", "clang++"))
 
     original_args = []
     for flag in sys.argv[1:]:
@@ -183,7 +184,8 @@ def wrapper_main(argv):
         else:
             print(f"warning: ignored blacklisted flag: {flag}")
 
-    cmdline = [command] + COMPILER_FLAGS_EARLY + original_args + COMPILER_FLAGS
+    cmdline = [str(command)] + COMPILER_FLAGS_EARLY + \
+        original_args + COMPILER_FLAGS
     if cpp_mode:
         cmdline += COMPILER_CXX_FLAGS
 
