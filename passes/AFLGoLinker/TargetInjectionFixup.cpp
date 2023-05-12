@@ -1,0 +1,36 @@
+#include <AFLGoLinker/TargetInjectionFixup.hpp>
+#include <Analysis/TargetDetection.hpp>
+
+#include <llvm-16/llvm/IR/PassManager.h>
+#include <llvm/IR/DerivedTypes.h>
+
+using namespace llvm;
+
+PreservedAnalyses
+AFLGoTargetInjectionFixupPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  auto &C = M.getContext();
+
+  FunctionAnalysisManager &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  for (auto &F : M) {
+    if (F.isDeclaration()) {
+      continue;
+    }
+
+    auto &Targets = FAM.getResult<AFLGoTargetDetectionAnalysis>(F);
+    for (auto [BB, CB] : Targets) {
+      auto *Arg = CB->getArgOperand(0);
+      auto *ArgType = cast<IntegerType>(Arg->getType());
+      auto *NewArg = ConstantInt::get(ArgType, TargetCounter);
+
+      CB->setArgOperand(0, NewArg);
+
+      TargetCounter++;
+    }
+  }
+
+  PreservedAnalyses PA;
+  PA.preserve<AFLGoTargetDetectionAnalysis>();
+  return PA;
+}

@@ -1,5 +1,4 @@
-; RUN: echo 'test.c:1' > %t
-; RUN: %opt_printer -passes='print-aflgo-target-definition' -targets=%t -disable-output 2>&1 %s | %FileCheck %s
+; RUN: %opt_printer -passes='print-aflgo-target-detection' -disable-output 2>&1 %s | %FileCheck %s
 
 ; CHECK: function_name,target_count
 
@@ -11,6 +10,7 @@ target triple = "x86_64-redhat-linux-gnu"
 ; CHECK: callee,1
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @callee() #0 !dbg !8 {
+  call void @__aflgo_trace_bb_target(i32 0)
   ret void, !dbg !12
 }
 
@@ -20,6 +20,8 @@ define dso_local void @caller() #0 !dbg !13 {
   call void @callee(), !dbg !14
   ret void, !dbg !15
 }
+
+declare void @__aflgo_trace_bb_target(i32)
 
 attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
 

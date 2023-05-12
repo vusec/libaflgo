@@ -24,7 +24,8 @@ FetchContent_MakeAvailable(Corrosion)
 find_package(Python3 REQUIRED)
 
 set(PRINTER_PLUGIN_NAME AFLGoAnalysisPrinter)
-set(AFLGO_PLUGIN_NAME AFLGoLTOPlugin)
+set(AFLGO_COMPILER_PLUGIN_NAME AFLGoCompilerPlugin)
+set(AFLGO_LINKER_PLUGIN_NAME AFLGoLTOPlugin)
 set(FUZZER_NAME fuzzer_aflgo)
 
 add_subdirectory(passes)

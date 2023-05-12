@@ -75,7 +75,8 @@ def is_shared(args):
     return False
 
 
-AFLGO_PLUGIN_PATH = Path("@AFLGO_PLUGIN_PATH@")
+AFLGO_COMPILER_PLUGIN_PATH = Path("@AFLGO_COMPILER_PLUGIN_PATH@")
+AFLGO_LINKER_PLUGIN_PATH = Path("@AFLGO_LINKER_PLUGIN_PATH@")
 FUZZER_PATH = Path("@FUZZER_PATH@")
 
 
@@ -87,7 +88,8 @@ def check_resource(resource_file):
 
 def check_resources():
     resources = [
-        AFLGO_PLUGIN_PATH,
+        AFLGO_COMPILER_PLUGIN_PATH,
+        AFLGO_LINKER_PLUGIN_PATH,
         FUZZER_PATH,
     ]
 
@@ -107,28 +109,36 @@ COMPILER_FLAGS = [
     "-g",  # required for targeting
     "-flto",
     "-fsanitize-coverage=trace-pc-guard",
+    f"-fpass-plugin={AFLGO_COMPILER_PLUGIN_PATH}",
+    "-Xclang",
+    "-load",
+    "-Xclang",
+    str(AFLGO_COMPILER_PLUGIN_PATH),
 ]
+
+
+def generate_compiler_flags(targets):
+    compiler_flags = COMPILER_FLAGS[:]
+    compiler_flags += ["-mllvm", f"-targets={targets}"]
+    return compiler_flags
+
 
 # These flags should be used always when compiling C++ code
 COMPILER_CXX_FLAGS = []
 
 # These flags should be used always when linking
 LINKER_FORWARD_FLAGS = [
-    f"--load-pass-plugin={AFLGO_PLUGIN_PATH}",
-    f"-mllvm=-load={AFLGO_PLUGIN_PATH}",
+    f"--load-pass-plugin={AFLGO_LINKER_PLUGIN_PATH}",
+    f"-mllvm=-load={AFLGO_LINKER_PLUGIN_PATH}",
 ]
 LINKER_FLAGS = [
     "-fuse-ld=lld",
 ]
 
 
-def generate_linker_flags(targets):
-    linker_forward_flags = LINKER_FORWARD_FLAGS[:]
-    linker_forward_flags += [f"-mllvm=-targets={targets}"]
-
+def generate_linker_flags():
     flags = LINKER_FLAGS[:]
-    flags.append(f"-Wl,{','.join(linker_forward_flags)}")
-
+    flags.append(f"-Wl,{','.join(LINKER_FORWARD_FLAGS[:])}")
     return flags
 
 
@@ -184,13 +194,17 @@ def wrapper_main(argv):
         else:
             print(f"warning: ignored blacklisted flag: {flag}")
 
-    cmdline = [str(command)] + COMPILER_FLAGS_EARLY + \
-        original_args + COMPILER_FLAGS
+    cmdline = (
+        [str(command)]
+        + COMPILER_FLAGS_EARLY
+        + original_args
+        + generate_compiler_flags(targets_path)
+    )
     if cpp_mode:
         cmdline += COMPILER_CXX_FLAGS
 
     if is_linking(original_args):
-        cmdline += generate_linker_flags(targets_path)
+        cmdline += generate_linker_flags()
         if cpp_mode:
             cmdline += LINKER_CXX_FLAGS
 
@@ -211,7 +225,7 @@ def flags_main(args):
     targets_path = get_targets_path()
 
     if args.compiler:
-        compiler_flags = COMPILER_FLAGS_EARLY + COMPILER_FLAGS
+        compiler_flags = COMPILER_FLAGS_EARLY + generate_compiler_flags(targets_path)
 
         if cpp_mode:
             compiler_flags += COMPILER_CXX_FLAGS
@@ -219,7 +233,7 @@ def flags_main(args):
         print(" ".join(compiler_flags))
 
     elif args.linker:
-        linker_flags = generate_linker_flags(targets_path)
+        linker_flags = generate_linker_flags()
         if cpp_mode:
             linker_flags += LINKER_CXX_FLAGS()
 

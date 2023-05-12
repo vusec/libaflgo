@@ -1,3 +1,4 @@
+add_subdirectory(AFLGoCompiler)
 add_subdirectory(Analysis)
 add_subdirectory(AnalysisPrinter)
-add_subdirectory(AFLGo)
+add_subdirectory(AFLGoLinker)

@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, time::Duration};
 
-use libaflgo_targets::{compute_test_case_distance, reset_distance_stats};
+use libaflgo_targets::distance::{compute_test_case_distance, reset_distance_stats};
 
 use libafl::{
     impl_serdeany,

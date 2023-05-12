@@ -1,6 +1,10 @@
-#include <Analysis/TargetDefinition.hpp>
+#include <AFLGoCompiler/TargetInjection.hpp>
+#include <Analysis/TargetDetection.hpp>
 
 #include <llvm/IR/DebugInfoMetadata.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/PassManager.h>
+#include <llvm/Passes/PassBuilder.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/FormatVariadic.h>
@@ -13,7 +17,7 @@ cl::opt<std::string>
                 cl::desc("Input file containing the target lines of code."),
                 cl::value_desc("targets"));
 
-bool AFLGoTargetDefinitionAnalysis::Target::matches(const DILocation &Loc) {
+bool AFLGoTargetInjectionPass::Target::matches(const DILocation &Loc) {
   auto Line = Loc.getLine();
   auto File = Loc.getFilename();
 
@@ -27,9 +31,7 @@ bool AFLGoTargetDefinitionAnalysis::Target::matches(const DILocation &Loc) {
   return !this->File.compare(File) && this->Line == Line;
 }
 
-AnalysisKey AFLGoTargetDefinitionAnalysis::Key;
-
-void AFLGoTargetDefinitionAnalysis::parseTargets(
+void AFLGoTargetInjectionPass::parseTargets(
     std::unique_ptr<MemoryBuffer> &TargetsBuffer) {
   SmallVector<StringRef, 16> Lines;
   TargetsBuffer->getBuffer().split(Lines, '\n');
@@ -44,7 +46,7 @@ void AFLGoTargetDefinitionAnalysis::parseTargets(
   }
 }
 
-AFLGoTargetDefinitionAnalysis::AFLGoTargetDefinitionAnalysis() {
+AFLGoTargetInjectionPass::AFLGoTargetInjectionPass() {
   auto VFS = vfs::getRealFileSystem();
   auto BufferOrErr = VFS->getBufferForFile(TargetsPath);
   if (std::error_code EC = BufferOrErr.getError()) {
@@ -56,31 +58,47 @@ AFLGoTargetDefinitionAnalysis::AFLGoTargetDefinitionAnalysis() {
   parseTargets(*BufferOrErr);
 }
 
-AFLGoTargetDefinitionAnalysis::Result
-AFLGoTargetDefinitionAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
-  SmallSet<BasicBlock *, 16> BBTargets;
-  for (auto &BB : F) {
-    bool BBIsTarget = false;
+PreservedAnalyses AFLGoTargetInjectionPass::run(Module &M,
+                                                ModuleAnalysisManager &MAM) {
+  auto &C = M.getContext();
+  auto *VoidTy = Type::getVoidTy(C);
+  auto *Int32Ty = Type::getInt32Ty(C);
+  auto AFLGoTraceBBTarget = M.getOrInsertFunction(
+      AFLGoTargetDetectionAnalysis::TargetFunctionName, VoidTy, Int32Ty);
 
-    for (auto &I : BB) {
-      auto *Loc = I.getDebugLoc().get();
-      if (!Loc) {
-        continue;
-      }
+  for (auto &F : M) {
+    if (F.isDeclaration()) {
+      continue;
+    }
 
-      for (auto &Target : Targets) {
-        if (Target.matches(*Loc)) {
-          BBTargets.insert(&BB);
-          BBIsTarget = true;
+    for (auto &BB : F) {
+      bool BBIsTarget = false;
+
+      for (auto &I : BB) {
+        auto *Loc = I.getDebugLoc().get();
+        if (!Loc) {
+          continue;
+        }
+
+        for (auto &Target : Targets) {
+          if (Target.matches(*Loc)) {
+            BBIsTarget = true;
+            break;
+          }
+        }
+
+        if (BBIsTarget) {
           break;
         }
       }
 
       if (BBIsTarget) {
-        break;
+        IRBuilder<> IRB(&*BB.getFirstInsertionPt());
+        auto *TargetIDPlaceholder = IRB.getInt32(0);
+        IRB.CreateCall(AFLGoTraceBBTarget, {TargetIDPlaceholder});
       }
     }
   }
 
-  return BBTargets;
+  return PreservedAnalyses::none();
 }

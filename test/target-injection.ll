@@ -1,27 +1,23 @@
-; RUN: %opt_printer -passes='print-aflgo-function-distance' -disable-output 2>&1 %s | %FileCheck %s
-
-; CHECK: function_name,distance
+; RUN: echo 'test.c:1' > %t
+; RUN: %opt_aflgo_compiler -passes='instrument-compiler-aflgo' -targets=%t 2>&1 -S %s | %FileCheck %s
 
 ; ModuleID = 'test.c'
 source_filename = "test.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-redhat-linux-gnu"
 
-; CHECK-DAG: callee,0.00
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @callee() #0 !dbg !8 {
-  call void @__aflgo_trace_bb_target(i32 0)
+; CHECK: define dso_local void @callee()
+; CHECK-NEXT:   call void @__aflgo_trace_bb_target(i32 0)
   ret void, !dbg !12
 }
 
-; CHECK-DAG: caller,1.00
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @caller() #0 !dbg !13 {
   call void @callee(), !dbg !14
   ret void, !dbg !15
 }
-
-declare void @__aflgo_trace_bb_target(i32)
 
 attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
 

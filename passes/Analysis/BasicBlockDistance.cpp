@@ -1,6 +1,6 @@
 #include <Analysis/BasicBlockDistance.hpp>
 #include <Analysis/FunctionDistance.hpp>
-#include <Analysis/TargetDefinition.hpp>
+#include <Analysis/TargetDetection.hpp>
 
 #include <llvm/ADT/BreadthFirstIterator.h>
 #include <llvm/Analysis/CallGraph.h>
@@ -31,8 +31,8 @@ AFLGoBasicBlockDistanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
 
     SmallDenseMap<BasicBlock *, double, 16> OriginBBs;
 
-    auto &TargetBBs = FAM.getResult<AFLGoTargetDefinitionAnalysis>(F);
-    for (auto *TargetBB : TargetBBs) {
+    auto &TargetBBs = FAM.getResult<AFLGoTargetDetectionAnalysis>(F);
+    for (auto [TargetBB, TargetCB] : TargetBBs) {
       OriginBBs[TargetBB] = 0;
     }
 

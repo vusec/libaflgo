@@ -1,5 +1,4 @@
-; RUN: echo 'test.c:3' > %t
-; RUN: %opt_aflgo -passes='instrument-aflgo' -targets=%t -S %s | %FileCheck %s
+; RUN: %opt_aflgo_linker -passes='instrument-linker-aflgo' -S %s | %FileCheck %s
 
 ; ModuleID = 'test.c'
 source_filename = "test.c"
@@ -20,7 +19,8 @@ define dso_local i32 @callee(i32 noundef %0) #0 !dbg !8 {
 
 6:                                                ; preds = %1
 ; CHECK: 6:
-; CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 0.000000e+00)
+; CHECK: call void @__aflgo_trace_bb_distance(double 0.000000e+00)
+  call void @__aflgo_trace_bb_target(i32 0)
   %7 = load i32, ptr %3, align 4, !dbg !19
   %8 = icmp sgt i32 %7, 7, !dbg !22
   br i1 %8, label %9, label %10, !dbg !23
@@ -92,6 +92,8 @@ define dso_local i32 @caller(i32 noundef %0) #0 !dbg !38 {
   %14 = load i32, ptr %2, align 4, !dbg !57
   ret i32 %14, !dbg !57
 }
+
+declare void @__aflgo_trace_bb_target(i32)
 
 attributes #0 = { noinline nounwind uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
 attributes #1 = { nocallback nofree nosync nounwind readnone speculatable willreturn }

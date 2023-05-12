@@ -1,6 +1,6 @@
 #include <Analysis/BasicBlockDistance.hpp>
 #include <Analysis/FunctionDistance.hpp>
-#include <Analysis/TargetDefinition.hpp>
+#include <Analysis/TargetDetection.hpp>
 
 #include <llvm/Analysis/CallGraph.h>
 #include <llvm/Passes/PassBuilder.h>
@@ -29,12 +29,12 @@ public:
   }
 };
 
-class AFLGoTargetDefinitionPrinterPass
-    : public PassInfoMixin<AFLGoTargetDefinitionPrinterPass> {
+class AFLGoTargetDetectionPrinterPass
+    : public PassInfoMixin<AFLGoTargetDetectionPrinterPass> {
   raw_ostream &OS;
 
 public:
-  explicit AFLGoTargetDefinitionPrinterPass(raw_ostream &OS) : OS(OS) {}
+  explicit AFLGoTargetDetectionPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
     FunctionAnalysisManager &FAM =
@@ -42,7 +42,7 @@ public:
 
     OS << "function_name,target_count\n";
     for (auto &F : M) {
-      auto Targets = FAM.getResult<AFLGoTargetDefinitionAnalysis>(F);
+      auto Targets = FAM.getResult<AFLGoTargetDetectionAnalysis>(F);
       if (Targets.size()) {
         OS << formatv("{0},{1}\n", F.getName(), Targets.size());
       }
@@ -82,7 +82,7 @@ llvm::PassPluginLibraryInfo getAFLGoAnalysisPrinterPluginInfo() {
       [](PassBuilder &PB) {
         PB.registerAnalysisRegistrationCallback(
             [](FunctionAnalysisManager &FAM) {
-              FAM.registerPass([] { return AFLGoTargetDefinitionAnalysis(); });
+              FAM.registerPass([] { return AFLGoTargetDetectionAnalysis(); });
             });
 
         PB.registerAnalysisRegistrationCallback([](ModuleAnalysisManager &MAM) {
@@ -95,8 +95,8 @@ llvm::PassPluginLibraryInfo getAFLGoAnalysisPrinterPluginInfo() {
         PB.registerPipelineParsingCallback(
             [](StringRef Name, ModulePassManager &MPM,
                ArrayRef<PassBuilder::PipelineElement>) {
-              if (Name == "print-aflgo-target-definition") {
-                MPM.addPass(AFLGoTargetDefinitionPrinterPass(dbgs()));
+              if (Name == "print-aflgo-target-detection") {
+                MPM.addPass(AFLGoTargetDetectionPrinterPass(dbgs()));
                 return true;
               }
 

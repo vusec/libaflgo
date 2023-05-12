@@ -1,9 +1,10 @@
-#include "Analysis/TargetDefinition.hpp"
 #include <Analysis/FunctionDistance.hpp>
+#include <Analysis/TargetDetection.hpp>
 
 #include <llvm/ADT/BreadthFirstIterator.h>
 #include <llvm/ADT/GraphTraits.h>
 #include <llvm/Analysis/CallGraph.h>
+
 #include <memory>
 
 using namespace llvm;
@@ -97,7 +98,7 @@ AFLGoFunctionDistanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
 
   auto TargetFunctionNodes = std::vector<const InvertedCallGraphNode *>();
   for (auto &F : M) {
-    auto BBTargets = FAM.getResult<AFLGoTargetDefinitionAnalysis>(F);
+    auto BBTargets = FAM.getResult<AFLGoTargetDetectionAnalysis>(F);
     if (!BBTargets.empty()) {
       TargetFunctionNodes.push_back(ICG[&F]);
     }

@@ -1,6 +1,9 @@
 set(PLUGIN_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/lib${LLVM_LIBDIR_SUFFIX}")
-set(AFLGO_PLUGIN_PATH
-    "${PLUGIN_INSTALL_PREFIX}/$<TARGET_FILE_NAME:${AFLGO_PLUGIN_NAME}>")
+set(AFLGO_COMPILER_PLUGIN_PATH
+    "${PLUGIN_INSTALL_PREFIX}/$<TARGET_FILE_NAME:${AFLGO_COMPILER_PLUGIN_NAME}>"
+)
+set(AFLGO_LINKER_PLUGIN_PATH
+    "${PLUGIN_INSTALL_PREFIX}/$<TARGET_FILE_NAME:${AFLGO_LINKER_PLUGIN_NAME}>")
 
 set(FUZZER_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 set(FUZZER_PATH
@@ -22,7 +25,8 @@ if(BUILD_TESTING)
   # artifacts in the build directory. This version of the wrapper can be used
   # directly in tests, without requiring to install the project.
 
-  set(AFLGO_PLUGIN_PATH $<TARGET_FILE:${AFLGO_PLUGIN_NAME}>)
+  set(AFLGO_COMPILER_PLUGIN_PATH $<TARGET_FILE:${AFLGO_COMPILER_PLUGIN_NAME}>)
+  set(AFLGO_LINKER_PLUGIN_PATH $<TARGET_FILE:${AFLGO_LINKER_PLUGIN_NAME}>)
 
   # The `-static` suffix is needed because this is how Corruption defines the
   # target.
@@ -33,13 +37,16 @@ if(BUILD_TESTING)
     GENERATE
     OUTPUT libaflgo_cc_test
     INPUT "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cc_test.gen")
+
   add_custom_target(build_libaflgo_cxx_test ALL
-    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cxx_test")
+                    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cxx_test")
   add_custom_command(
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cxx_test"
-    COMMAND ${CMAKE_COMMAND} -E copy
-            "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cc_test"
-            "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cxx_test")
+    COMMAND
+      ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cc_test"
+      "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cxx_test"
+    MAIN_DEPENDENCY "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cc_test"
+    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cc_test.gen")
 
   set(${PROJECT_NAME}_CC_WRAPPER_PATH
       "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_cc_test"

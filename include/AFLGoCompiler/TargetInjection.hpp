@@ -1,12 +1,11 @@
 #pragma once
 
-#include <llvm/ADT/SmallSet.h>
-#include <llvm/IR/PassManager.h>
+#include <llvm/Passes/PassBuilder.h>
 
 namespace llvm {
 
-class AFLGoTargetDefinitionAnalysis
-    : public AnalysisInfoMixin<AFLGoTargetDefinitionAnalysis> {
+class AFLGoTargetInjectionPass
+    : public PassInfoMixin<AFLGoTargetInjectionPass> {
 
   class Target {
     std::string File;
@@ -22,13 +21,11 @@ class AFLGoTargetDefinitionAnalysis
   void parseTargets(std::unique_ptr<MemoryBuffer> &TargetsBuffer);
 
 public:
-  using Result = SmallSet<BasicBlock *, 16>;
+  AFLGoTargetInjectionPass();
 
-  static AnalysisKey Key;
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
-  AFLGoTargetDefinitionAnalysis();
-
-  Result run(Function &F, FunctionAnalysisManager &FAM);
+  static bool isRequired() { return true; }
 };
 
 } // namespace llvm
