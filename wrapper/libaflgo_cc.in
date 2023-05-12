@@ -179,8 +179,11 @@ def wrapper_main(argv):
     targets_path = get_targets_path()
 
     clang = get_clang()
-    command = clang if not cpp_mode else clang.with_name(
-        clang.name.replace("clang", "clang++"))
+    command = (
+        clang
+        if not cpp_mode
+        else clang.with_name(clang.name.replace("clang", "clang++"))
+    )
 
     original_args = []
     for flag in sys.argv[1:]:
