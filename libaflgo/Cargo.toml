@@ -5,6 +5,5 @@ authors = ["Elia Geretto <e.geretto@vu.nl"]
 edition = "2021"
 
 [dependencies]
-serde = { version = "1.0.160", features = ["derive"] }
 libafl = { workspace = true }
-libaflgo_targets = { path = "../libaflgo_targets" }
+serde = { version = "1.0.160", features = ["derive"] }

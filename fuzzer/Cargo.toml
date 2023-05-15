@@ -13,6 +13,7 @@ libafl_targets = { workspace = true, features = [
 	"libfuzzer",
 ] }
 libaflgo = { path = "../libaflgo" }
+libaflgo_targets = { path = "../libaflgo_targets" }
 mimalloc = "0.1.36"
 nix = "0.26.2"
 

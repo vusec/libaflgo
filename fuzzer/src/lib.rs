@@ -46,7 +46,8 @@ use libafl_targets::{
     libfuzzer_initialize, libfuzzer_test_one_input, std_edges_map_observer, CmpLogObserver,
 };
 
-use libaflgo::{CoolingSchedule, DistanceFeedback, DistanceObserver, DistancePowerMutationalStage};
+use libaflgo::{CoolingSchedule, DistanceFeedback, DistancePowerMutationalStage};
+use libaflgo_targets::distance::InProcessDistanceObserver;
 
 /// LibAFL-based in-process reimplementation of AFLGo
 #[derive(Parser, Debug)]
@@ -238,7 +239,7 @@ fn fuzz<P: AsRef<Path>>(
     let time_observer = TimeObserver::new("time");
 
     // Create an observation channel to keep track of the distance of test cases
-    let distance_observer = DistanceObserver::new(String::from("distance"));
+    let distance_observer = InProcessDistanceObserver::new(String::from("distance"));
 
     let cmplog_observer = CmpLogObserver::new("cmplog", true);
 

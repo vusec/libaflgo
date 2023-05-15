@@ -1,9 +1,14 @@
-use std::sync::{atomic::AtomicU64, atomic::Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 
-const DISTANCE_RESOLUTION: f64 = 1000_f64;
+use libafl::prelude::{ExitKind, Named, Observer, OwnedRef, UsesInput};
+use serde::{Deserialize, Serialize};
 
-#[derive(Default)]
-struct DistanceStats {
+use libaflgo::DistanceObserver;
+
+const DISTANCE_RESOLUTION: f64 = 1e3;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DistanceStats {
     bb_distance_sum: AtomicU64,
     bb_distance_count: AtomicU64,
 }
@@ -44,12 +49,55 @@ pub extern "C" fn __aflgo_trace_bb_distance(bb_distance: f64) {
     STATS.add_bb_distance(bb_distance);
 }
 
-pub fn compute_test_case_distance() -> f64 {
-    STATS.compute_test_case_distance()
+#[derive(Debug, Serialize, Deserialize)]
+pub struct InProcessDistanceObserver<'a> {
+    name: String,
+    distance: Option<f64>,
+    stats: OwnedRef<'a, DistanceStats>,
 }
 
-pub fn reset_distance_stats() {
-    STATS.reset();
+impl<'a> InProcessDistanceObserver<'a> {
+    pub fn new(name: String) -> Self {
+        Self::with_stats_ref(name, &STATS)
+    }
+
+    #[must_use]
+    pub fn with_stats_ref(name: String, stats: &'a DistanceStats) -> Self {
+        Self {
+            name,
+            distance: None,
+            stats: OwnedRef::Ref(stats),
+        }
+    }
+}
+impl<S: UsesInput> DistanceObserver<S> for InProcessDistanceObserver<'_> {
+    fn distance(&self) -> f64 {
+        self.distance.expect("distance not set")
+    }
+}
+
+impl<'a> Named for InProcessDistanceObserver<'a> {
+    fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl<'a, S: UsesInput> Observer<S> for InProcessDistanceObserver<'a> {
+    fn pre_exec(&mut self, _state: &mut S, _input: &S::Input) -> Result<(), libafl::Error> {
+        self.stats.as_ref().reset();
+        self.distance = None;
+        Ok(())
+    }
+
+    fn post_exec(
+        &mut self,
+        _state: &mut S,
+        _input: &S::Input,
+        _exit_kind: &ExitKind,
+    ) -> Result<(), libafl::Error> {
+        self.distance = Some(self.stats.as_ref().compute_test_case_distance());
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -57,18 +105,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        reset_distance_stats();
+    fn test_distance_calculation() {
+        let stats = DistanceStats::new();
+        stats.reset();
 
-        __aflgo_trace_bb_distance(1.0);
-        __aflgo_trace_bb_distance(2.0);
+        stats.add_bb_distance(1.0);
+        stats.add_bb_distance(2.0);
 
-        let test_case_distance = compute_test_case_distance();
+        let test_case_distance = stats.compute_test_case_distance();
         assert_eq!(test_case_distance, 1.5);
 
-        reset_distance_stats();
+        stats.reset();
 
-        let test_case_distance = compute_test_case_distance();
+        let test_case_distance = stats.compute_test_case_distance();
         assert!(test_case_distance.is_nan());
     }
 }

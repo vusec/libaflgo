@@ -1,6 +1,4 @@
-use std::{marker::PhantomData, time::Duration};
-
-use libaflgo_targets::distance::{compute_test_case_distance, reset_distance_stats};
+use std::{fmt, marker::PhantomData, time::Duration};
 
 use libafl::{
     impl_serdeany,
@@ -15,60 +13,26 @@ use libafl::{
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct DistanceObserver {
-    name: String,
-    distance: Option<f64>,
-}
-
-impl DistanceObserver {
+pub trait DistanceObserver<S>: Observer<S>
+where
+    S: UsesInput,
+{
     #[must_use]
-    pub fn new(name: String) -> Self {
-        Self {
-            name,
-            distance: None,
-        }
-    }
-
-    pub fn distance(&self) -> Option<f64> {
-        self.distance
-    }
-}
-
-impl Named for DistanceObserver {
-    fn name(&self) -> &str {
-        &self.name
-    }
-}
-
-impl<S: UsesInput> Observer<S> for DistanceObserver {
-    fn pre_exec(&mut self, _state: &mut S, _input: &S::Input) -> Result<(), libafl::Error> {
-        reset_distance_stats();
-        self.distance = None;
-        Ok(())
-    }
-
-    fn post_exec(
-        &mut self,
-        _state: &mut S,
-        _input: &S::Input,
-        _exit_kind: &ExitKind,
-    ) -> Result<(), libafl::Error> {
-        self.distance = Some(compute_test_case_distance());
-        Ok(())
-    }
+    fn distance(&self) -> f64;
 }
 
 #[derive(Debug)]
-pub struct DistanceFeedback {
+pub struct DistanceFeedback<O, S> {
     name: String,
     distance: Option<f64>,
 
     schedule: Option<CoolingSchedule>,
     time_to_exploit: Duration,
+
+    phantom: PhantomData<(O, S)>,
 }
 
-impl DistanceFeedback {
+impl<S: UsesInput, O: DistanceObserver<S>> DistanceFeedback<O, S> {
     #[must_use]
     pub fn new(name: String, schedule: Option<CoolingSchedule>, time_to_exploit: Duration) -> Self {
         Self {
@@ -76,12 +40,13 @@ impl DistanceFeedback {
             distance: None,
             schedule,
             time_to_exploit,
+            phantom: PhantomData,
         }
     }
 
     #[must_use]
     pub fn with_observer(
-        observer: &DistanceObserver,
+        observer: &O,
         schedule: Option<CoolingSchedule>,
         time_to_exploit: Duration,
     ) -> Self {
@@ -90,11 +55,14 @@ impl DistanceFeedback {
             distance: None,
             schedule,
             time_to_exploit,
+            phantom: PhantomData,
         }
     }
 }
 
-impl<S: UsesInput + HasClientPerfMonitor + HasMetadata> Feedback<S> for DistanceFeedback {
+impl<S: UsesInput + HasClientPerfMonitor + HasMetadata + fmt::Debug, O: DistanceObserver<S>>
+    Feedback<S> for DistanceFeedback<O, S>
+{
     fn init_state(&mut self, state: &mut S) -> Result<(), libafl::Error> {
         state.add_metadata(DistanceMetadata::with_schedule(
             self.schedule,
@@ -115,14 +83,10 @@ impl<S: UsesInput + HasClientPerfMonitor + HasMetadata> Feedback<S> for Distance
         EM: EventFirer<State = S>,
         OT: ObserversTuple<S>,
     {
-        let distance_observer = observers
-            .match_name::<DistanceObserver>(self.name())
-            .ok_or_else(|| {
-                libafl::Error::key_not_found("DistanceObserver not found".to_string())
-            })?;
-        let cur_distance = distance_observer
-            .distance()
-            .ok_or_else(|| Error::empty_optional("distance was not set in observer".to_string()))?;
+        let distance_observer = observers.match_name::<O>(self.name()).ok_or_else(|| {
+            libafl::Error::key_not_found("DistanceObserver not found".to_string())
+        })?;
+        let cur_distance = distance_observer.distance();
         self.distance = Some(cur_distance);
 
         let distance_metadata = state.metadata_mut::<DistanceMetadata>().unwrap();
@@ -187,7 +151,7 @@ impl<S: UsesInput + HasClientPerfMonitor + HasMetadata> Feedback<S> for Distance
     }
 }
 
-impl Named for DistanceFeedback {
+impl<O, S> Named for DistanceFeedback<O, S> {
     fn name(&self) -> &str {
         &self.name
     }
