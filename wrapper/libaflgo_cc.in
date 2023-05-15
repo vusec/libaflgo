@@ -117,9 +117,10 @@ COMPILER_FLAGS = [
 ]
 
 
-def generate_compiler_flags(targets):
+def generate_compiler_flags(targets, is_asm):
     compiler_flags = COMPILER_FLAGS[:]
-    compiler_flags += ["-mllvm", f"-targets={targets}"]
+    if not is_asm:
+        compiler_flags += ["-mllvm", f"-targets={targets}"]
     return compiler_flags
 
 
@@ -173,6 +174,14 @@ def get_clang() -> Path:
     return Path(os.environ.get("AFLGO_CLANG", "clang"))
 
 
+def check_asm(args):
+    for arg in args:
+        extension = Path(arg).suffix.lower()
+        if extension == "s" or extension == "asm":
+            return True
+    return False
+
+
 def wrapper_main(argv):
     cpp_mode = "cxx" in sys.argv[0]
 
@@ -184,6 +193,8 @@ def wrapper_main(argv):
         if not cpp_mode
         else clang.with_name(clang.name.replace("clang", "clang++"))
     )
+
+    is_asm = check_asm(sys.argv[1:])
 
     original_args = []
     for flag in sys.argv[1:]:
@@ -201,7 +212,7 @@ def wrapper_main(argv):
         [str(command)]
         + COMPILER_FLAGS_EARLY
         + original_args
-        + generate_compiler_flags(targets_path)
+        + generate_compiler_flags(targets_path, is_asm)
     )
     if cpp_mode:
         cmdline += COMPILER_CXX_FLAGS
@@ -228,7 +239,9 @@ def flags_main(args):
     targets_path = get_targets_path()
 
     if args.compiler:
-        compiler_flags = COMPILER_FLAGS_EARLY + generate_compiler_flags(targets_path)
+        compiler_flags = COMPILER_FLAGS_EARLY + generate_compiler_flags(
+            targets_path, False
+        )
 
         if cpp_mode:
             compiler_flags += COMPILER_CXX_FLAGS
