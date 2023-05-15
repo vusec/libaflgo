@@ -47,7 +47,7 @@ use libafl_targets::{
 };
 
 use libaflgo::{CoolingSchedule, DistanceFeedback, DistancePowerMutationalStage};
-use libaflgo_targets::distance::InProcessDistanceObserver;
+use libaflgo_targets::{distance::InProcessDistanceObserver, target::get_targets_map_observer};
 
 /// LibAFL-based in-process reimplementation of AFLGo
 #[derive(Parser, Debug)]
@@ -241,9 +241,14 @@ fn fuzz<P: AsRef<Path>>(
     // Create an observation channel to keep track of the distance of test cases
     let distance_observer = InProcessDistanceObserver::new(String::from("distance"));
 
+    let targets_observer =
+        HitcountsMapObserver::new(unsafe { get_targets_map_observer("targets") });
+
     let cmplog_observer = CmpLogObserver::new("cmplog", true);
 
     let map_feedback = MaxMapFeedback::tracking(&edges_observer, true, false);
+
+    let targets_feedback = MaxMapFeedback::new(&targets_observer);
 
     let calibration = CalibrationStage::new(&map_feedback);
 
@@ -259,7 +264,8 @@ fn fuzz<P: AsRef<Path>>(
             &distance_observer,
             Some(cooling_schedule),
             time_to_exploit
-        )
+        ),
+        targets_feedback
     );
 
     // A feedback to choose if an input is a solution or not
@@ -329,7 +335,12 @@ fn fuzz<P: AsRef<Path>>(
     let mut executor = TimeoutExecutor::new(
         InProcessExecutor::new(
             &mut harness,
-            tuple_list!(edges_observer, time_observer, distance_observer),
+            tuple_list!(
+                edges_observer,
+                time_observer,
+                distance_observer,
+                targets_observer
+            ),
             &mut fuzzer,
             &mut state,
             &mut mgr,
