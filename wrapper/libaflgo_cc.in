@@ -177,7 +177,7 @@ def get_clang() -> Path:
 def check_asm(args):
     for arg in args:
         extension = Path(arg).suffix.lower()
-        if extension == "s" or extension == "asm":
+        if extension == ".s" or extension == ".asm":
             return True
     return False
 
