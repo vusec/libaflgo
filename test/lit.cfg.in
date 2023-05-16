@@ -21,7 +21,10 @@ if not printer_plugin_path.is_file():
     print(f"Plugin not found: {printer_plugin_path}")
     exit(1)
 config.substitutions.append(
-    ("%opt_printer", f"{tools_dir}/opt -load-pass-plugin={printer_plugin_path}")
+    (
+        "%opt_printer",
+        f"{tools_dir}/opt -opaque-pointers=0 -load-pass-plugin={printer_plugin_path}",
+    )
 )
 
 aflgo_compiler_plugin_path = Path("@AFLGO_COMPILER_PLUGIN_PATH@")
@@ -31,7 +34,7 @@ if not aflgo_compiler_plugin_path.is_file():
 config.substitutions.append(
     (
         "%opt_aflgo_compiler",
-        f"{tools_dir}/opt -load-pass-plugin={aflgo_compiler_plugin_path}",
+        f"{tools_dir}/opt -opaque-pointers=0 -load-pass-plugin={aflgo_compiler_plugin_path}",
     )
 )
 
@@ -42,7 +45,7 @@ if not aflgo_linker_plugin_path.is_file():
 config.substitutions.append(
     (
         "%opt_aflgo_linker",
-        f"{tools_dir}/opt -load-pass-plugin={aflgo_linker_plugin_path}",
+        f"{tools_dir}/opt -opaque-pointers=0 -load-pass-plugin={aflgo_linker_plugin_path}",
     )
 )
 config.substitutions.append(("%llvm-dis", f"{tools_dir}/llvm-dis"))

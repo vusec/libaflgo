@@ -11,9 +11,9 @@ define dso_local i32 @callee(i32 noundef %0) #0 !dbg !8 {
 ; CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 1.000000e+00)
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
-  store i32 %0, ptr %3, align 4
-  call void @llvm.dbg.declare(metadata ptr %3, metadata !13, metadata !DIExpression()), !dbg !14
-  %4 = load i32, ptr %3, align 4, !dbg !15
+  store i32 %0, i32* %3, align 4
+  call void @llvm.dbg.declare(metadata i32* %3, metadata !13, metadata !DIExpression()), !dbg !14
+  %4 = load i32, i32* %3, align 4, !dbg !15
   %5 = icmp sgt i32 %4, 4, !dbg !17
   br i1 %5, label %6, label %11, !dbg !18
 
@@ -21,33 +21,33 @@ define dso_local i32 @callee(i32 noundef %0) #0 !dbg !8 {
 ; CHECK: 6:
 ; CHECK: call void @__aflgo_trace_bb_distance(double 0.000000e+00)
   call void @__aflgo_trace_bb_target(i32 0)
-  %7 = load i32, ptr %3, align 4, !dbg !19
+  %7 = load i32, i32* %3, align 4, !dbg !19
   %8 = icmp sgt i32 %7, 7, !dbg !22
   br i1 %8, label %9, label %10, !dbg !23
 
 9:                                                ; preds = %6
-  store i32 1, ptr %2, align 4, !dbg !24
+  store i32 1, i32* %2, align 4, !dbg !24
   br label %16, !dbg !24
 
 10:                                               ; preds = %6
-  store i32 2, ptr %2, align 4, !dbg !26
+  store i32 2, i32* %2, align 4, !dbg !26
   br label %16, !dbg !26
 
 11:                                               ; preds = %1
-  %12 = load i32, ptr %3, align 4, !dbg !28
+  %12 = load i32, i32* %3, align 4, !dbg !28
   %13 = icmp slt i32 %12, 2, !dbg !31
   br i1 %13, label %14, label %15, !dbg !32
 
 14:                                               ; preds = %11
-  store i32 3, ptr %2, align 4, !dbg !33
+  store i32 3, i32* %2, align 4, !dbg !33
   br label %16, !dbg !33
 
 15:                                               ; preds = %11
-  store i32 4, ptr %2, align 4, !dbg !35
+  store i32 4, i32* %2, align 4, !dbg !35
   br label %16, !dbg !35
 
 16:                                               ; preds = %15, %14, %10, %9
-  %17 = load i32, ptr %2, align 4, !dbg !37
+  %17 = load i32, i32* %2, align 4, !dbg !37
   ret i32 %17, !dbg !37
 }
 
@@ -60,16 +60,16 @@ define dso_local i32 @caller(i32 noundef %0) #0 !dbg !38 {
 ; CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 1.200000e+01)
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
-  store i32 %0, ptr %3, align 4
-  call void @llvm.dbg.declare(metadata ptr %3, metadata !39, metadata !DIExpression()), !dbg !40
-  %4 = load i32, ptr %3, align 4, !dbg !41
+  store i32 %0, i32* %3, align 4
+  call void @llvm.dbg.declare(metadata i32* %3, metadata !39, metadata !DIExpression()), !dbg !40
+  %4 = load i32, i32* %3, align 4, !dbg !41
   %5 = icmp sgt i32 %4, 3, !dbg !43
   br i1 %5, label %6, label %12, !dbg !44
 
 6:                                                ; preds = %1
 ; CHECK: 6:
 ; CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 1.100000e+01)
-  %7 = load i32, ptr %3, align 4, !dbg !45
+  %7 = load i32, i32* %3, align 4, !dbg !45
   %8 = icmp sgt i32 %7, 5, !dbg !48
   br i1 %8, label %9, label %11, !dbg !49
 
@@ -77,19 +77,19 @@ define dso_local i32 @caller(i32 noundef %0) #0 !dbg !38 {
 ; CHECK: 9:
 ; CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 1.000000e+01)
   %10 = call i32 @callee(i32 noundef 7), !dbg !50
-  store i32 %10, ptr %2, align 4, !dbg !52
+  store i32 %10, i32* %2, align 4, !dbg !52
   br label %13, !dbg !52
 
 11:                                               ; preds = %6
-  store i32 3, ptr %2, align 4, !dbg !53
+  store i32 3, i32* %2, align 4, !dbg !53
   br label %13, !dbg !53
 
 12:                                               ; preds = %1
-  store i32 2, ptr %2, align 4, !dbg !55
+  store i32 2, i32* %2, align 4, !dbg !55
   br label %13, !dbg !55
 
 13:                                               ; preds = %12, %11, %9
-  %14 = load i32, ptr %2, align 4, !dbg !57
+  %14 = load i32, i32* %2, align 4, !dbg !57
   ret i32 %14, !dbg !57
 }
 
