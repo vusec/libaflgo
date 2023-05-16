@@ -7,7 +7,7 @@
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
-    "ghcr.io/devcontainers/features/rust:1": {},
+		"ghcr.io/devcontainers/features/rust:1": {},
 		"ghcr.io/devcontainers/features/python:1": {}
 	},
 
