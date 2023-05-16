@@ -32,12 +32,14 @@ AFLGoBasicBlockDistanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
     SmallDenseMap<BasicBlock *, double, 16> OriginBBs;
 
     auto &TargetBBs = FAM.getResult<AFLGoTargetDetectionAnalysis>(F);
-    for (auto [TargetBB, TargetCB] : TargetBBs) {
+    for (auto &TargetBBPair : TargetBBs) {
+      auto *TargetBB = TargetBBPair.first;
       OriginBBs[TargetBB] = 0;
     }
 
     auto *CGNode = CG[&F];
-    for (auto [CallInstOpt, CalleeCGNode] : *CGNode) {
+    for (auto &CallEdge : *CGNode) {
+      auto &CallInstOpt = CallEdge.first;
       if (!CallInstOpt) {
         continue;
       }
@@ -72,7 +74,9 @@ AFLGoBasicBlockDistanceAnalysis::Result::computeBBDistances(Function &F) {
 
   auto DistanceMap = AFLGoBasicBlockDistanceAnalysis::Result::BBToDistanceTy();
   std::map<BasicBlock *, std::vector<double>> DistancesFromOrigins;
-  for (auto [OriginBB, OriginBBDistance] : OriginBBs) {
+  for (auto &OriginBBPair : OriginBBs) {
+    auto *OriginBB = OriginBBPair.first;
+    auto OriginBBDistance = OriginBBPair.second;
     DistanceMap[OriginBB] = OriginBBDistance;
 
     auto InverseOriginBB = static_cast<Inverse<BasicBlock *>>(OriginBB);
@@ -88,13 +92,16 @@ AFLGoBasicBlockDistanceAnalysis::Result::computeBBDistances(Function &F) {
     }
   }
 
-  for (auto [BB, Distances] : DistancesFromOrigins) {
+  for (auto &DistancesFromOriginPair : DistancesFromOrigins) {
+    auto &Distances = DistancesFromOriginPair.second;
+
     double HarmonicMean = 0;
     for (auto Distance : Distances) {
       HarmonicMean += 1.0 / Distance;
     }
     HarmonicMean = Distances.size() / HarmonicMean;
 
+    auto *BB = DistancesFromOriginPair.first;
     DistanceMap[BB] = HarmonicMean;
   }
 

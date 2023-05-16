@@ -19,7 +19,8 @@ AFLGoTargetInjectionFixupPass::run(Module &M, ModuleAnalysisManager &MAM) {
     }
 
     auto &Targets = FAM.getResult<AFLGoTargetDetectionAnalysis>(F);
-    for (auto [BB, CB] : Targets) {
+    for (auto &TargetPair : Targets) {
+      auto *CB = TargetPair.second;
       auto *Arg = CB->getArgOperand(0);
       auto *ArgType = cast<IntegerType>(Arg->getType());
       auto *NewArg = ConstantInt::get(ArgType, TargetCounter);

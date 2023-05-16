@@ -49,7 +49,9 @@ void AFLGoTargetInjectionPass::parseTargets(
       continue;
     }
 
-    auto [File, LineNumStr] = Line.split(':');
+    auto LineSplit = Line.split(':');
+    auto File = LineSplit.first;
+    auto LineNumStr = LineSplit.second;
     auto LineNum = std::stoul(LineNumStr.str());
     Targets.push_back(Target(File.str(), LineNum));
   }

@@ -41,13 +41,19 @@ class InvertedCallGraph {
 public:
   InvertedCallGraph(const CallGraph &CG) {
     // Construct all nodes
-    for (auto &[F, CGNode] : CG) {
+    for (auto &CGEntry : CG) {
+      auto *F = CGEntry.first;
+      auto &CGNode = CGEntry.second;
       FunctionMap[F] = std::make_unique<InvertedCallGraphNode>(CGNode);
     }
 
     // Fill caller references
-    for (auto &[F, CGNode] : CG) {
-      for (auto [CallSite, Callee] : *CGNode) {
+    for (auto &CGEntry : CG) {
+      auto *F = CGEntry.first;
+      auto &CGNode = CGEntry.second;
+      for (auto &CGNodePair : *CGNode) {
+        auto &CallSite = CGNodePair.first;
+        auto *Callee = CGNodePair.second;
         Function *CalleeF = Callee->getFunction();
         if (!CalleeF) {
           // Ignore external nodes
@@ -114,9 +120,12 @@ AFLGoFunctionDistanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
   }
 
   auto DistanceMap = DenseMap<Function *, double>();
-  for (auto [Function, Distances] : DistancesFromTargets) {
+  for (auto &DistancesFromTargetPair : DistancesFromTargets) {
+    auto *Function = DistancesFromTargetPair.first;
     if (!Function)
       continue;
+
+    auto &Distances = DistancesFromTargetPair.second;
 
     double HarmonicMean = 0;
     for (auto Distance : Distances) {

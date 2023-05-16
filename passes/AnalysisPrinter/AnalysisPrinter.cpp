@@ -22,7 +22,9 @@ public:
     auto &FunctionDistances = AM.getResult<AFLGoFunctionDistanceAnalysis>(M);
 
     OS << "function_name,distance\n";
-    for (const auto &[Function, Distance] : FunctionDistances) {
+    for (const auto &FunctionDistancePair : FunctionDistances) {
+      auto *Function = FunctionDistancePair.first;
+      auto Distance = FunctionDistancePair.second;
       OS << formatv("{0},{1}\n", Function->getName(), Distance);
     }
 
@@ -66,7 +68,10 @@ public:
     OS << "function_name,basic_block_name,distance\n";
     for (auto &F : M) {
       auto DistanceMap = BBDistanceResult.computeBBDistances(F);
-      for (auto [BB, Distance] : DistanceMap) {
+      for (auto &DistanceEntry : DistanceMap) {
+        auto *BB = DistanceEntry.first;
+        auto Distance = DistanceEntry.second;
+
         OS << formatv("{0},", F.getName());
         BB->printAsOperand(OS, false);
         OS << formatv(",{0}\n", Distance);
