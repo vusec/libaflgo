@@ -1,12 +1,14 @@
 #include <AFLGoCompiler/TargetInjection.hpp>
 #include <Analysis/TargetDetection.hpp>
 
+#include <llvm/ADT/SmallString.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/Error.h>
+#include <llvm/Support/FileSystem.h>
 #include <llvm/Support/FormatVariadic.h>
 #include <llvm/Support/VirtualFileSystem.h>
 
@@ -20,15 +22,20 @@ cl::opt<std::string>
 bool AFLGoTargetInjectionPass::Target::matches(const DILocation &Loc) {
   auto Line = Loc.getLine();
   auto File = Loc.getFilename();
+  auto Directory = Loc.getDirectory();
 
   if (File.empty()) {
     if (auto *OriginalLoc = Loc.getInlinedAt()) {
       Line = OriginalLoc->getLine();
       File = OriginalLoc->getFilename();
+      Directory = OriginalLoc->getDirectory();
     }
   }
 
-  return !this->File.compare(File) && this->Line == Line;
+  SmallString<16> AbsolutePath = File;
+  sys::fs::make_absolute(Directory, AbsolutePath);
+
+  return !AbsolutePath.compare(this->File) && Line == this->Line;
 }
 
 void AFLGoTargetInjectionPass::parseTargets(

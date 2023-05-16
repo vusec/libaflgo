@@ -1,4 +1,4 @@
-// RUN: echo 'test/harness-dry-run.c:15' > %t.targets.txt
+// RUN: echo '%s:15' > %t.targets.txt
 // RUN: AFLGO_TARGETS=%t.targets.txt %libaflgo_cc_test %s -o %t -Wl,-save-temps
 // RUN: %llvm-dis %t.0.5.precodegen.bc
 // RUN: echo 'yolo' > %t.input.txt

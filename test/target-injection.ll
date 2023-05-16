@@ -1,4 +1,4 @@
-; RUN: echo 'test.c:1' > %t
+; RUN: echo '/path/to/file/test.c:1' > %t
 ; RUN: %opt_aflgo_compiler -passes='instrument-compiler-aflgo' -targets=%t 2>&1 -S %s | %FileCheck %s
 
 ; ModuleID = 'test.c'
@@ -26,7 +26,7 @@ attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-l
 !llvm.ident = !{!7}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 15.0.7 (Fedora 15.0.7-2.fc37)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-!1 = !DIFile(filename: "test.c", directory: "/home/egeretto/Downloads/ir_test")
+!1 = !DIFile(filename: "test.c", directory: "/path/to/file")
 !2 = !{i32 7, !"Dwarf Version", i32 4}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{i32 1, !"wchar_size", i32 4}
