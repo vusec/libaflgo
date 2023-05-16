@@ -15,11 +15,22 @@ endif()
 include(FetchContent)
 
 FetchContent_Declare(
-    Corrosion
-    GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
-    GIT_TAG v0.3.5
+  Corrosion
+  GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
+  GIT_TAG v0.3.5)
+FetchContent_Declare(
+  SVF
+  GIT_REPOSITORY https://github.com/SVF-tools/SVF.git
+  GIT_TAG 984e7593778478cb55f4f1cbef1fe9ad6b023a01 # May 16th, 2023
 )
-FetchContent_MakeAvailable(Corrosion)
+FetchContent_MakeAvailable(Corrosion SVF)
+
+# Fix SVF CMake targets
+target_include_directories(SvfCore PUBLIC "${svf_SOURCE_DIR}/svf/include"
+                                          "${svf_BINARY_DIR}/include")
+target_link_libraries(SvfLLVM PUBLIC SvfCore)
+set_target_properties(SvfCoreObj SvfCore SvfLLVM
+                      PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 find_package(Python3 REQUIRED)
 
