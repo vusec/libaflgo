@@ -12,9 +12,9 @@ RUN apt-get update && \
 
 RUN wget https://apt.llvm.org/llvm.sh && \
 		chmod +x llvm.sh && \
-		./llvm.sh 16 && \
+		./llvm.sh 15 && \
 		rm llvm.sh
 
 RUN python3 -m pip install \
-				lit==16 \
+				lit \
 				cmake-format

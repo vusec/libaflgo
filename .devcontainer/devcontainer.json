@@ -26,7 +26,7 @@
 				"cheshirekow.cmake-format"
 			],
 			"settings": {
-				"clangd.path": "clangd-16"
+				"clangd.path": "clangd-15"
 			}
 		}
 	}
