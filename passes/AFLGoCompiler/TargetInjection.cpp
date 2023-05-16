@@ -32,10 +32,12 @@ bool AFLGoTargetInjectionPass::Target::matches(const DILocation &Loc) {
     }
   }
 
-  SmallString<16> AbsolutePath = File;
+  auto AbsolutePath = SmallString<16>(File);
   sys::fs::make_absolute(Directory, AbsolutePath);
+  auto RealPath = SmallString<16>();
+  sys::fs::real_path(AbsolutePath, RealPath);
 
-  return !AbsolutePath.compare(this->File) && Line == this->Line;
+  return !RealPath.compare(this->File) && Line == this->Line;
 }
 
 void AFLGoTargetInjectionPass::parseTargets(
