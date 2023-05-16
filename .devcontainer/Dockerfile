@@ -16,4 +16,5 @@ RUN wget https://apt.llvm.org/llvm.sh && \
 		rm llvm.sh
 
 RUN python3 -m pip install \
-				lit==16
+				lit==16 \
+				cmake-format
