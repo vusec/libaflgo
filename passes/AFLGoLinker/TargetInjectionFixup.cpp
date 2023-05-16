@@ -1,8 +1,8 @@
 #include <AFLGoLinker/TargetInjectionFixup.hpp>
 #include <Analysis/TargetDetection.hpp>
 
-#include <llvm-16/llvm/IR/PassManager.h>
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/PassManager.h>
 
 using namespace llvm;
 

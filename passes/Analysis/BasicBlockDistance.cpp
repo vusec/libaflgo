@@ -38,11 +38,11 @@ AFLGoBasicBlockDistanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
 
     auto *CGNode = CG[&F];
     for (auto [CallInstOpt, CalleeCGNode] : *CGNode) {
-      if (!CallInstOpt.has_value()) {
+      if (!CallInstOpt) {
         continue;
       }
 
-      CallBase *CallInst = cast<CallBase>(CallInstOpt.value());
+      CallBase *CallInst = cast<CallBase>(*CallInstOpt);
       auto *CalledFunction = CallInst->getCalledFunction();
       if (FunctionDistances.find(CalledFunction) == FunctionDistances.end()) {
         continue;

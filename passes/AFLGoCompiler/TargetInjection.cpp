@@ -45,7 +45,7 @@ void AFLGoTargetInjectionPass::parseTargets(
   SmallVector<StringRef, 16> Lines;
   TargetsBuffer->getBuffer().split(Lines, '\n');
   for (auto Line : Lines) {
-    if (Line.empty() || Line.starts_with("#")) {
+    if (Line.empty() || Line[0] == '#') {
       continue;
     }
 
