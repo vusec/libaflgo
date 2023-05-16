@@ -12,7 +12,7 @@ RUN apt-get update && \
 
 RUN wget https://apt.llvm.org/llvm.sh && \
 		chmod +x llvm.sh && \
-		./llvm.sh 16 all && \
+		./llvm.sh 16 && \
 		rm llvm.sh
 
 RUN python3 -m pip install \
