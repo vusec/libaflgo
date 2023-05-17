@@ -11,6 +11,7 @@
 #include "WPA/Andersen.h"
 
 #include <memory>
+#include <utility>
 
 using namespace llvm;
 
@@ -22,14 +23,19 @@ static cl::opt<bool> ClExtendCG(
 namespace {
 
 class InvertedCallGraphNode {
+public:
+  using CallRecord =
+      std::pair<Optional<WeakTrackingVH>, InvertedCallGraphNode *>;
+
+private:
   friend class InvertedCallGraph;
 
   const std::unique_ptr<CallGraphNode> &Inner;
-  std::vector<InvertedCallGraphNode *> Callers; // Non-owning pointers
+  std::vector<CallRecord> Callers; // Non-owning pointers
 
 public:
-  using iterator = std::vector<InvertedCallGraphNode *>::iterator;
-  using const_iterator = std::vector<InvertedCallGraphNode *>::const_iterator;
+  using iterator = std::vector<CallRecord>::iterator;
+  using const_iterator = std::vector<CallRecord>::const_iterator;
 
   inline iterator begin() { return Callers.begin(); }
   inline iterator end() { return Callers.end(); }
@@ -70,7 +76,8 @@ public:
           continue;
         }
 
-        FunctionMap[CalleeF]->Callers.push_back(FunctionMap[F].get());
+        FunctionMap[CalleeF]->Callers.push_back(
+            std::make_pair(CallSite, FunctionMap[F].get()));
       }
     }
   }
@@ -85,20 +92,26 @@ public:
 
 template <> struct GraphTraits<const InvertedCallGraphNode *> {
   using NodeRef = const InvertedCallGraphNode *;
-  using ChildIteratorType = InvertedCallGraphNode::const_iterator;
+  using CGNPairTy = InvertedCallGraphNode::CallRecord;
+  using EdgeRef = const InvertedCallGraphNode::CallRecord &;
 
   static NodeRef getEntryNode(const InvertedCallGraphNode *StartICGNode) {
     return StartICGNode;
   }
 
+  static NodeRef getValue(CGNPairTy P) { return P.second; }
+  using ChildIteratorType =
+      mapped_iterator<InvertedCallGraphNode::const_iterator,
+                      decltype(&getValue)>;
+
   // NOLINTNEXTLINE(readability-identifier-naming)
   static ChildIteratorType child_begin(NodeRef N) {
-    return ChildIteratorType(N->begin());
+    return ChildIteratorType(N->begin(), &getValue);
   }
 
   // NOLINTNEXTLINE(readability-identifier-naming)
   static ChildIteratorType child_end(NodeRef N) {
-    return ChildIteratorType(N->end());
+    return ChildIteratorType(N->end(), &getValue);
   }
 };
 
@@ -134,6 +147,19 @@ void extendCallGraph(CallGraph &LLVMCallGraph, Module &M) {
   SVF::LLVMModuleSet::releaseLLVMModuleSet();
 }
 
+std::map<Function *, unsigned int>
+getDistancesFromFunction(Function &TargetFunction, InvertedCallGraph &ICG) {
+  auto *TargetFunctionNode = ICG[&TargetFunction];
+
+  std::map<Function *, unsigned int> DistancesFromTarget;
+  for (auto BFIter = bf_begin(TargetFunctionNode);
+       BFIter != bf_end(TargetFunctionNode); ++BFIter) {
+    DistancesFromTarget[BFIter->getInner()->getFunction()] = BFIter.getLevel();
+  }
+
+  return DistancesFromTarget;
+}
+
 AnalysisKey AFLGoFunctionDistanceAnalysis::Key;
 
 AFLGoFunctionDistanceAnalysis::Result
@@ -156,20 +182,17 @@ AFLGoFunctionDistanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
     ICG = std::make_unique<InvertedCallGraph>(*OwnedCG);
   }
 
-  auto TargetFunctionNodes = std::vector<const InvertedCallGraphNode *>();
+  std::map<Function *, std::vector<unsigned int>> DistancesFromTargets;
   for (auto &F : M) {
     auto BBTargets = FAM.getResult<AFLGoTargetDetectionAnalysis>(F);
-    if (!BBTargets.empty()) {
-      TargetFunctionNodes.push_back((*ICG)[&F]);
+    if (BBTargets.empty()) {
+      // F is not a target.
+      continue;
     }
-  }
 
-  std::map<Function *, std::vector<unsigned int>> DistancesFromTargets;
-  for (auto *TargetFunctionNode : TargetFunctionNodes) {
-    for (auto BFIter = bf_begin(TargetFunctionNode);
-         BFIter != bf_end(TargetFunctionNode); ++BFIter) {
-      DistancesFromTargets[BFIter->getInner()->getFunction()].push_back(
-          BFIter.getLevel());
+    auto Distances = getDistancesFromFunction(F, *ICG);
+    for (auto &DistanceEntry : Distances) {
+      DistancesFromTargets[DistanceEntry.first].push_back(DistanceEntry.second);
     }
   }
 
