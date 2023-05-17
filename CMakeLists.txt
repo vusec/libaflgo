@@ -4,14 +4,6 @@ project(AFLGoNew)
 
 include(GNUInstallDirs)
 
-if(NOT LLVM_FOUND)
-  find_package(LLVM 15 REQUIRED CONFIG)
-  message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-  message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
-  include(AddLLVM)
-endif()
-
 include(FetchContent)
 
 FetchContent_Declare(
@@ -28,6 +20,13 @@ FetchContent_Declare(
   GIT_TAG 984e7593778478cb55f4f1cbef1fe9ad6b023a01 # May 16th, 2023
 )
 FetchContent_MakeAvailable(Corrosion Z3)
+
+# SVF picks up Z3_LIBRARIES from LLVM, so import Z3 before LLVM.
+find_package(LLVM 15 REQUIRED CONFIG)
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+include(AddLLVM)
 
 set(Z3_DIR "${z3_SOURCE_DIR}") # SVF does not use find_package for Z3
 set(SVF_ENABLE_ASSERTIONS ON CACHE BOOL "Enable SVF assertions")
