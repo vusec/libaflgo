@@ -20,6 +20,11 @@ static cl::opt<bool> ClExtendCG(
     cl::desc("Extend call graph with indirect edges through pointer analysis"),
     cl::init(false));
 
+static cl::opt<bool>
+    ClHawkeyeDistance("use-hawkeye-distance",
+                      cl::desc("Use Hawkeye function distance definition"),
+                      cl::init(false));
+
 namespace {
 
 class InvertedCallGraphNode {
@@ -147,11 +152,73 @@ void extendCallGraph(CallGraph &LLVMCallGraph, Module &M) {
   SVF::LLVMModuleSet::releaseLLVMModuleSet();
 }
 
-std::map<Function *, unsigned int>
-getDistancesFromFunction(Function &TargetFunction, InvertedCallGraph &ICG) {
+std::map<Function *, double>
+getHawkeyeDistancesFromFunction(Function &TargetFunction,
+                                InvertedCallGraph &ICG) {
+  using QueueItem = std::pair<double, const InvertedCallGraphNode *>;
+  using QueueType = std::priority_queue<QueueItem, SmallVector<QueueItem>,
+                                        std::greater<QueueItem>>;
+
+  QueueType Queue;
+
+  auto *TargetFunctionNode = ICG[&TargetFunction];
+  Queue.emplace(0.0, TargetFunctionNode);
+
+  std::map<Function *, double> DistancesFromTarget;
+  while (!Queue.empty()) {
+    auto CurrentDistance = Queue.top().first;
+    auto *CurrentNode = Queue.top().second;
+    Queue.pop();
+
+    auto *CurrentFunction = CurrentNode->getInner()->getFunction();
+    if (DistancesFromTarget.find(CurrentFunction) !=
+        DistancesFromTarget.end()) {
+      continue;
+    }
+    DistancesFromTarget[CurrentFunction] = CurrentDistance;
+
+    std::map<InvertedCallGraphNode *, std::pair<double, double>> Calls;
+
+    std::set<BasicBlock *> Seen;
+    for (auto &Edge : *CurrentNode) {
+      auto &Call = Edge.first;
+      auto *CallerNode = Edge.second;
+      if (!Call) {
+        continue;
+      }
+      Calls[CallerNode].first++;
+
+      auto *CB = cast<CallBase>(*Call);
+      auto *BB = CB->getParent();
+      if (Seen.find(BB) == Seen.end()) {
+        Calls[CallerNode].second++;
+        Seen.insert(BB);
+      }
+    }
+
+    for (auto &Entry : Calls) {
+      auto *CallerNode = Entry.first;
+      auto &CallerNodeCounts = Entry.second;
+
+      float CallSiteCoeff =
+          (2 * CallerNodeCounts.first + 1) / (2 * CallerNodeCounts.first);
+      float CallBBCoeff =
+          (2 * CallerNodeCounts.second + 1) / (2 * CallerNodeCounts.second);
+      float EdgeDistance = CallSiteCoeff * CallBBCoeff;
+
+      Queue.emplace(CurrentDistance + EdgeDistance, CallerNode);
+    }
+  }
+
+  return DistancesFromTarget;
+}
+
+std::map<Function *, double>
+getAFLGoDistancesFromFunction(Function &TargetFunction,
+                              InvertedCallGraph &ICG) {
   auto *TargetFunctionNode = ICG[&TargetFunction];
 
-  std::map<Function *, unsigned int> DistancesFromTarget;
+  std::map<Function *, double> DistancesFromTarget;
   for (auto BFIter = bf_begin(TargetFunctionNode);
        BFIter != bf_end(TargetFunctionNode); ++BFIter) {
     DistancesFromTarget[BFIter->getInner()->getFunction()] = BFIter.getLevel();
@@ -182,7 +249,7 @@ AFLGoFunctionDistanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
     ICG = std::make_unique<InvertedCallGraph>(*OwnedCG);
   }
 
-  std::map<Function *, std::vector<unsigned int>> DistancesFromTargets;
+  std::map<Function *, std::vector<double>> DistancesFromTargets;
   for (auto &F : M) {
     auto BBTargets = FAM.getResult<AFLGoTargetDetectionAnalysis>(F);
     if (BBTargets.empty()) {
@@ -190,7 +257,13 @@ AFLGoFunctionDistanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
       continue;
     }
 
-    auto Distances = getDistancesFromFunction(F, *ICG);
+    std::map<Function *, double> Distances;
+    if (!ClHawkeyeDistance) {
+      Distances = getAFLGoDistancesFromFunction(F, *ICG);
+    } else {
+      Distances = getHawkeyeDistancesFromFunction(F, *ICG);
+    }
+
     for (auto &DistanceEntry : Distances) {
       DistancesFromTargets[DistanceEntry.first].push_back(DistanceEntry.second);
     }
