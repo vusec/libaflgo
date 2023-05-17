@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.24)
 
 project(AFLGoNew)
 
@@ -19,10 +19,16 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
   GIT_TAG v0.3.5)
 FetchContent_Declare(
+  Z3
+  URL https://github.com/Z3Prover/z3/releases/download/z3-4.8.12/z3-4.8.12-x64-glibc-2.31.zip
+  FIND_PACKAGE_ARGS 4.8)
+FetchContent_Declare(
   SVF
   GIT_REPOSITORY https://github.com/SVF-tools/SVF.git
   GIT_TAG 984e7593778478cb55f4f1cbef1fe9ad6b023a01 # May 16th, 2023
 )
+FetchContent_MakeAvailable(Z3)
+set(Z3_DIR "${z3_SOURCE_DIR}") # SVF does not use find_package for Z3
 FetchContent_MakeAvailable(Corrosion SVF)
 
 # Fix SVF CMake targets
