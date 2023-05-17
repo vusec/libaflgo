@@ -27,9 +27,11 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/SVF-tools/SVF.git
   GIT_TAG 984e7593778478cb55f4f1cbef1fe9ad6b023a01 # May 16th, 2023
 )
-FetchContent_MakeAvailable(Z3)
+FetchContent_MakeAvailable(Corrosion Z3)
+
 set(Z3_DIR "${z3_SOURCE_DIR}") # SVF does not use find_package for Z3
-FetchContent_MakeAvailable(Corrosion SVF)
+set(SVF_ENABLE_ASSERTIONS ON CACHE BOOL "Enable SVF assertions")
+FetchContent_MakeAvailable(SVF)
 
 # Fix SVF CMake targets
 target_include_directories(SvfCore PUBLIC "${svf_SOURCE_DIR}/svf/include"
