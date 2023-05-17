@@ -6,3 +6,4 @@ target_include_directories(
   Analysis
   PUBLIC ${CMAKE_SOURCE_DIR}/include
   PRIVATE ${LLVM_INCLUDE_DIRS})
+target_link_libraries(Analysis PRIVATE SvfLLVM)

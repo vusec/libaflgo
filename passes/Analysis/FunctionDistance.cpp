@@ -5,9 +5,19 @@
 #include <llvm/ADT/GraphTraits.h>
 #include <llvm/Analysis/CallGraph.h>
 
+#include "SVF-LLVM/LLVMModule.h"
+#include "SVF-LLVM/SVFIRBuilder.h"
+#include "SVFIR/SVFIR.h"
+#include "WPA/Andersen.h"
+
 #include <memory>
 
 using namespace llvm;
+
+static cl::opt<bool> ClExtendCG(
+    "extend-cg",
+    cl::desc("Extend call graph with indirect edges through pointer analysis"),
+    cl::init(false));
 
 namespace {
 
@@ -92,6 +102,38 @@ template <> struct GraphTraits<const InvertedCallGraphNode *> {
   }
 };
 
+void extendCallGraph(CallGraph &LLVMCallGraph, Module &M) {
+  auto *LLVMModuleSet = SVF::LLVMModuleSet::getLLVMModuleSet();
+  auto *SVFModule = LLVMModuleSet->buildSVFModule(M);
+
+  SVF::SVFIRBuilder Builder(SVFModule);
+  auto *PAG = Builder.build();
+
+  auto *Andersen = SVF::AndersenWaveDiff::createAndersenWaveDiff(PAG);
+  auto *SVFCallGraph = Andersen->getPTACallGraph();
+
+  auto &IndCallMap = SVFCallGraph->getIndCallMap();
+  for (auto &IndCallEntry : IndCallMap) {
+    auto *SVFCallNode = IndCallEntry.first;
+    auto *SVFCaller = SVFCallNode->getCaller();
+    auto *LLVMCaller = cast<Function>(LLVMModuleSet->getLLVMValue(SVFCaller));
+    auto *LLVMCallerNode = LLVMCallGraph[LLVMCaller];
+
+    auto &Callees = IndCallEntry.second;
+    for (auto *SVFCallee : Callees) {
+      auto *LLVMCallee = cast<Function>(LLVMModuleSet->getLLVMValue(SVFCallee));
+      auto *SVFCall = SVFCallNode->getCallSite();
+      auto *LLVMCall = cast<CallBase>(LLVMModuleSet->getLLVMValue(SVFCall));
+      LLVMCallerNode->addCalledFunction(const_cast<CallBase *>(LLVMCall),
+                                        LLVMCallGraph[LLVMCallee]);
+    }
+  }
+
+  SVF::AndersenWaveDiff::releaseAndersenWaveDiff();
+  SVF::SVFIR::releaseSVFIR();
+  SVF::LLVMModuleSet::releaseLLVMModuleSet();
+}
+
 AnalysisKey AFLGoFunctionDistanceAnalysis::Key;
 
 AFLGoFunctionDistanceAnalysis::Result
@@ -99,14 +141,26 @@ AFLGoFunctionDistanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
   FunctionAnalysisManager &FAM =
       MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
-  auto &CG = MAM.getResult<CallGraphAnalysis>(M);
-  auto ICG = InvertedCallGraph{CG};
+  std::unique_ptr<CallGraph> OwnedCG;
+  std::unique_ptr<InvertedCallGraph> ICG;
+  if (!ClExtendCG) {
+    // If we are not extending the call graph, we can reuse the one provided by
+    // the analysis.
+    auto &CG = MAM.getResult<CallGraphAnalysis>(M);
+    ICG = std::make_unique<InvertedCallGraph>(CG);
+  } else {
+    // We need to modify our own copy of the call graph to avoid breaking other
+    // LLVM passes. This call graph is useful only to us anyway.
+    OwnedCG = std::make_unique<CallGraph>(M);
+    extendCallGraph(*OwnedCG, M);
+    ICG = std::make_unique<InvertedCallGraph>(*OwnedCG);
+  }
 
   auto TargetFunctionNodes = std::vector<const InvertedCallGraphNode *>();
   for (auto &F : M) {
     auto BBTargets = FAM.getResult<AFLGoTargetDetectionAnalysis>(F);
     if (!BBTargets.empty()) {
-      TargetFunctionNodes.push_back(ICG[&F]);
+      TargetFunctionNodes.push_back((*ICG)[&F]);
     }
   }
 
