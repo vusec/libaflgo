@@ -1,4 +1,5 @@
 #include <AFLGoLinker/DistanceInstrumentation.hpp>
+#include <AFLGoLinker/FunctionDistanceInstrumentation.hpp>
 #include <AFLGoLinker/TargetInjectionFixup.hpp>
 
 #include <Analysis/BasicBlockDistance.hpp>
@@ -9,6 +10,11 @@
 #include <llvm/Passes/PassPlugin.h>
 
 using namespace llvm;
+
+static cl::opt<bool>
+    ClTraceFunctionDistance("trace-function-distance",
+                            cl::desc("Add function distance tracing callbacks"),
+                            cl::init(false));
 
 llvm::PassPluginLibraryInfo getAFLGoLinkerPluginInfo() {
   return {
@@ -27,16 +33,22 @@ llvm::PassPluginLibraryInfo getAFLGoLinkerPluginInfo() {
 
         PB.registerFullLinkTimeOptimizationLastEPCallback(
             [](ModulePassManager &MPM, OptimizationLevel) {
-              MPM.addPass(AFLGoTargetInjectionFixupPass());
+              if (ClTraceFunctionDistance) {
+                MPM.addPass(FunctionDistancePass());
+              }
               MPM.addPass(AFLGoDistanceInstrumentationPass());
+              MPM.addPass(AFLGoTargetInjectionFixupPass());
             });
 
         PB.registerPipelineParsingCallback(
             [](StringRef Name, ModulePassManager &MPM,
                ArrayRef<PassBuilder::PipelineElement>) {
               if (Name == "instrument-linker-aflgo") {
-                MPM.addPass(AFLGoTargetInjectionFixupPass());
+                if (ClTraceFunctionDistance) {
+                  MPM.addPass(FunctionDistancePass());
+                }
                 MPM.addPass(AFLGoDistanceInstrumentationPass());
+                MPM.addPass(AFLGoTargetInjectionFixupPass());
                 return true;
               }
 
