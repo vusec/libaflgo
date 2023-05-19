@@ -21,6 +21,14 @@ where
     fn distance(&self) -> f64;
 }
 
+pub trait SimilarityObserver<S>: Observer<S>
+where
+    S: UsesInput,
+{
+    #[must_use]
+    fn similarity(&self) -> f64;
+}
+
 #[derive(Debug)]
 pub struct DistanceFeedback<O, S> {
     name: String,
@@ -157,6 +165,127 @@ impl<O, S> Named for DistanceFeedback<O, S> {
     }
 }
 
+#[derive(Debug)]
+pub struct SimilarityFeedback<O, S> {
+    name: String,
+    similarity: Option<f64>,
+
+    phantom: PhantomData<(O, S)>,
+}
+
+impl<S: UsesInput, O: SimilarityObserver<S>> SimilarityFeedback<O, S> {
+    #[must_use]
+    pub fn new(name: String) -> Self {
+        Self {
+            name,
+            similarity: None,
+            phantom: PhantomData,
+        }
+    }
+
+    #[must_use]
+    pub fn with_observer(observer: &O) -> Self {
+        Self {
+            name: observer.name().to_string(),
+            similarity: None,
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<S: UsesInput + HasClientPerfMonitor + HasMetadata + fmt::Debug, O: SimilarityObserver<S>>
+    Feedback<S> for SimilarityFeedback<O, S>
+{
+    fn init_state(&mut self, state: &mut S) -> Result<(), libafl::Error> {
+        state.add_metadata(SimilarityMetadata::new());
+        Ok(())
+    }
+
+    fn is_interesting<EM, OT>(
+        &mut self,
+        state: &mut S,
+        manager: &mut EM,
+        _input: &S::Input,
+        observers: &OT,
+        _exit_kind: &ExitKind,
+    ) -> Result<bool, libafl::Error>
+    where
+        EM: EventFirer<State = S>,
+        OT: ObserversTuple<S>,
+    {
+        let similarity_observer = observers.match_name::<O>(self.name()).ok_or_else(|| {
+            libafl::Error::key_not_found("SimilarityObserver not found".to_string())
+        })?;
+        let cur_similarity = similarity_observer.similarity();
+        self.similarity = Some(cur_similarity);
+
+        let similarity_metadata = state.metadata_mut::<SimilarityMetadata>().unwrap();
+        if !similarity_metadata.is_interesting(cur_similarity) {
+            return Ok(false);
+        }
+
+        // This reports the existing range, without including the current test
+        // case since it is not yet known if it will be inserted in the queue.
+
+        let min_similarity = similarity_metadata.min_similarity();
+        let max_similarity = similarity_metadata.max_similarity();
+
+        if let (Some(min_similarity), Some(max_similarity)) = (min_similarity, max_similarity) {
+            manager.fire(
+                state,
+                Event::UpdateUserStats {
+                    name: self.name.clone() + "_min",
+                    value: UserStats::Float(min_similarity),
+                    phantom: PhantomData,
+                },
+            )?;
+
+            manager.fire(
+                state,
+                Event::UpdateUserStats {
+                    name: self.name.clone() + "_max",
+                    value: UserStats::Float(max_similarity),
+                    phantom: PhantomData,
+                },
+            )?;
+        }
+
+        Ok(true)
+    }
+
+    fn append_metadata<OT>(
+        &mut self,
+        state: &mut S,
+        _observers: &OT,
+        testcase: &mut Testcase<S::Input>,
+    ) -> Result<(), libafl::Error>
+    where
+        OT: ObserversTuple<S>,
+    {
+        let cur_similarity = self
+            .similarity
+            .ok_or_else(|| Error::empty_optional("similarity was not set".to_string()))?;
+        testcase.add_metadata(SimilarityTestcaseMetadata::new(cur_similarity));
+
+        let similarity_metadata = state.metadata_mut::<SimilarityMetadata>().unwrap();
+        similarity_metadata.update_range(cur_similarity);
+
+        self.similarity = None;
+        Ok(())
+    }
+
+    fn discard_metadata(&mut self, _state: &mut S, _input: &S::Input) -> Result<(), libafl::Error> {
+        self.similarity = None;
+        Ok(())
+    }
+}
+
+impl<O, S> Named for SimilarityFeedback<O, S> {
+    fn name(&self) -> &str {
+        &self.name
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, Copy)]
 pub enum CoolingSchedule {
     Exponential,
@@ -256,6 +385,84 @@ impl DistanceTestcaseMetadata {
 
 impl_serdeany!(DistanceTestcaseMetadata);
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct SimilarityMetadata {
+    min_similarity: Option<f64>,
+    max_similarity: Option<f64>,
+}
+
+impl SimilarityMetadata {
+    #[must_use]
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    pub fn update_range(&mut self, cur_similarity: f64) {
+        self.min_similarity = Some(
+            self.min_similarity
+                .unwrap_or(cur_similarity)
+                .min(cur_similarity),
+        );
+        self.max_similarity = Some(
+            self.max_similarity
+                .unwrap_or(cur_similarity)
+                .max(cur_similarity),
+        );
+    }
+
+    pub fn is_interesting(&mut self, cur_similarity: f64) -> bool {
+        if !cur_similarity.is_finite() {
+            return false;
+        }
+
+        if let Some(min_distance) = self.min_similarity {
+            cur_similarity < min_distance
+        } else {
+            true
+        }
+    }
+
+    #[must_use]
+    pub fn normalize(&self, cur_similarity: f64) -> Option<f64> {
+        let min_distance = self.min_similarity?;
+        let max_distance = self.max_similarity?;
+        if min_distance == max_distance {
+            return None;
+        }
+
+        Some((cur_similarity - min_distance) / (max_distance - min_distance))
+    }
+
+    pub fn min_similarity(&self) -> Option<f64> {
+        self.min_similarity
+    }
+
+    pub fn max_similarity(&self) -> Option<f64> {
+        self.max_similarity
+    }
+}
+
+impl_serdeany!(SimilarityMetadata);
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SimilarityTestcaseMetadata {
+    similarity: f64,
+}
+
+impl SimilarityTestcaseMetadata {
+    #[must_use]
+    pub fn new(similarity: f64) -> Self {
+        Self { similarity }
+    }
+
+    #[must_use]
+    pub fn similarity(&self) -> f64 {
+        self.similarity
+    }
+}
+
+impl_serdeany!(SimilarityTestcaseMetadata);
+
 const HAVOC_MAX_MULT: f64 = 64.0; // From testcase_score.rs
 const MAX_FACTOR: f64 = 32.0;
 
@@ -290,8 +497,21 @@ where
         };
 
         let Some(norm_distance) = distance_metadata.normalize(test_case_distance) else { return Ok(perf_score); };
+        let mut p = 1.0 - norm_distance;
 
-        let p = (1.0 - norm_distance) * (1.0 - t_schedule) + 0.5 * t_schedule;
+        if let Ok(similarity_metadata) = entry.metadata::<SimilarityTestcaseMetadata>() {
+            let test_case_similarity = similarity_metadata.similarity();
+            // If distance is finite, similarity has to be as well.
+            assert!(test_case_similarity.is_finite());
+
+            let similarity_metadata = state.metadata::<SimilarityMetadata>()?;
+            // If distance range was present, similarity range has to be as well.
+            let norm_similarity = similarity_metadata.normalize(test_case_similarity).unwrap();
+
+            p *= norm_similarity;
+        }
+
+        p = p * (1.0 - t_schedule) + 0.5 * t_schedule;
         let power_factor = 2.0_f64.powf(2.0 * f64::log2(MAX_FACTOR) * (p - 0.5));
         perf_score *= power_factor;
 
