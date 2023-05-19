@@ -1,3 +1,4 @@
+#include <Analysis/ExtendedCallGraph.hpp>
 #include <Analysis/FunctionDistance.hpp>
 #include <Analysis/TargetDetection.hpp>
 
@@ -5,25 +6,10 @@
 #include <llvm/ADT/GraphTraits.h>
 #include <llvm/Analysis/CallGraph.h>
 
-#include "SVF-LLVM/LLVMModule.h"
-#include "SVF-LLVM/SVFIRBuilder.h"
-#include "SVFIR/SVFIR.h"
-#include "WPA/Andersen.h"
-
 #include <memory>
 #include <utility>
 
 using namespace llvm;
-
-static cl::opt<bool> ClExtendCG(
-    "extend-cg",
-    cl::desc("Extend call graph with indirect edges through pointer analysis"),
-    cl::init(false));
-
-static cl::opt<bool>
-    ClHawkeyeDistance("use-hawkeye-distance",
-                      cl::desc("Use Hawkeye function distance definition"),
-                      cl::init(false));
 
 namespace {
 
@@ -120,38 +106,6 @@ template <> struct GraphTraits<const InvertedCallGraphNode *> {
   }
 };
 
-void extendCallGraph(CallGraph &LLVMCallGraph, Module &M) {
-  auto *LLVMModuleSet = SVF::LLVMModuleSet::getLLVMModuleSet();
-  auto *SVFModule = LLVMModuleSet->buildSVFModule(M);
-
-  SVF::SVFIRBuilder Builder(SVFModule);
-  auto *PAG = Builder.build();
-
-  auto *Andersen = SVF::AndersenWaveDiff::createAndersenWaveDiff(PAG);
-  auto *SVFCallGraph = Andersen->getPTACallGraph();
-
-  auto &IndCallMap = SVFCallGraph->getIndCallMap();
-  for (auto &IndCallEntry : IndCallMap) {
-    auto *SVFCallNode = IndCallEntry.first;
-    auto *SVFCaller = SVFCallNode->getCaller();
-    auto *LLVMCaller = cast<Function>(LLVMModuleSet->getLLVMValue(SVFCaller));
-    auto *LLVMCallerNode = LLVMCallGraph[LLVMCaller];
-
-    auto &Callees = IndCallEntry.second;
-    for (auto *SVFCallee : Callees) {
-      auto *LLVMCallee = cast<Function>(LLVMModuleSet->getLLVMValue(SVFCallee));
-      auto *SVFCall = SVFCallNode->getCallSite();
-      auto *LLVMCall = cast<CallBase>(LLVMModuleSet->getLLVMValue(SVFCall));
-      LLVMCallerNode->addCalledFunction(const_cast<CallBase *>(LLVMCall),
-                                        LLVMCallGraph[LLVMCallee]);
-    }
-  }
-
-  SVF::AndersenWaveDiff::releaseAndersenWaveDiff();
-  SVF::SVFIR::releaseSVFIR();
-  SVF::LLVMModuleSet::releaseLLVMModuleSet();
-}
-
 std::map<Function *, double>
 getHawkeyeDistancesFromFunction(Function &TargetFunction,
                                 InvertedCallGraph &ICG) {
@@ -234,20 +188,14 @@ AFLGoFunctionDistanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
   FunctionAnalysisManager &FAM =
       MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
-  std::unique_ptr<CallGraph> OwnedCG;
-  std::unique_ptr<InvertedCallGraph> ICG;
-  if (!ClExtendCG) {
-    // If we are not extending the call graph, we can reuse the one provided by
-    // the analysis.
-    auto &CG = MAM.getResult<CallGraphAnalysis>(M);
-    ICG = std::make_unique<InvertedCallGraph>(CG);
+  CallGraph *CG = nullptr;
+  if (!UseExtendedCG) {
+    CG = &MAM.getResult<CallGraphAnalysis>(M);
   } else {
-    // We need to modify our own copy of the call graph to avoid breaking other
-    // LLVM passes. This call graph is useful only to us anyway.
-    OwnedCG = std::make_unique<CallGraph>(M);
-    extendCallGraph(*OwnedCG, M);
-    ICG = std::make_unique<InvertedCallGraph>(*OwnedCG);
+    CG = &MAM.getResult<ExtendedCallGraphAnalysis>(M);
   }
+
+  InvertedCallGraph ICG{*CG};
 
   std::map<Function *, std::vector<double>> DistancesFromTargets;
   for (auto &F : M) {
@@ -258,10 +206,10 @@ AFLGoFunctionDistanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
     }
 
     std::map<Function *, double> Distances;
-    if (!ClHawkeyeDistance) {
-      Distances = getAFLGoDistancesFromFunction(F, *ICG);
+    if (!UseHawkeyeDistance) {
+      Distances = getAFLGoDistancesFromFunction(F, ICG);
     } else {
-      Distances = getHawkeyeDistancesFromFunction(F, *ICG);
+      Distances = getHawkeyeDistancesFromFunction(F, ICG);
     }
 
     for (auto &DistanceEntry : Distances) {

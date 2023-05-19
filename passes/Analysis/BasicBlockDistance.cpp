@@ -1,4 +1,5 @@
 #include <Analysis/BasicBlockDistance.hpp>
+#include <Analysis/ExtendedCallGraph.hpp>
 #include <Analysis/FunctionDistance.hpp>
 #include <Analysis/TargetDetection.hpp>
 
@@ -19,7 +20,13 @@ AFLGoBasicBlockDistanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
   AFLGoBasicBlockDistanceAnalysis::Result::FunctionToOriginBBsMapTy
       FunctionToOriginBBs;
 
-  auto &CG = MAM.getResult<CallGraphAnalysis>(M);
+  CallGraph *CG = nullptr;
+  if (!UseExtendedCG) {
+    CG = &MAM.getResult<CallGraphAnalysis>(M);
+  } else {
+    CG = &MAM.getResult<ExtendedCallGraphAnalysis>(M);
+  }
+
   auto &FunctionDistances = MAM.getResult<AFLGoFunctionDistanceAnalysis>(M);
   FunctionAnalysisManager &FAM =
       MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
@@ -37,15 +44,16 @@ AFLGoBasicBlockDistanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
       OriginBBs[TargetBB] = 0;
     }
 
-    auto *CGNode = CG[&F];
+    auto *CGNode = (*CG)[&F];
     for (auto &CallEdge : *CGNode) {
       auto &CallInstOpt = CallEdge.first;
       if (!CallInstOpt) {
         continue;
       }
-
       CallBase *CallInst = cast<CallBase>(*CallInstOpt);
-      auto *CalledFunction = CallInst->getCalledFunction();
+
+      auto *CalleeNode = CallEdge.second;
+      auto *CalledFunction = CalleeNode->getFunction();
       if (FunctionDistances.find(CalledFunction) == FunctionDistances.end()) {
         continue;
       }

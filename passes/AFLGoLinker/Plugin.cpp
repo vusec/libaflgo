@@ -3,6 +3,7 @@
 #include <AFLGoLinker/TargetInjectionFixup.hpp>
 
 #include <Analysis/BasicBlockDistance.hpp>
+#include <Analysis/ExtendedCallGraph.hpp>
 #include <Analysis/FunctionDistance.hpp>
 #include <Analysis/TargetDetection.hpp>
 
@@ -10,6 +11,16 @@
 #include <llvm/Passes/PassPlugin.h>
 
 using namespace llvm;
+
+static cl::opt<bool> ClExtendCG(
+    "extend-cg",
+    cl::desc("Extend call graph with indirect edges through pointer analysis"),
+    cl::init(false));
+
+static cl::opt<bool>
+    ClHawkeyeDistance("use-hawkeye-distance",
+                      cl::desc("Use Hawkeye function distance definition"),
+                      cl::init(false));
 
 static cl::opt<bool>
     ClTraceFunctionDistance("trace-function-distance",
@@ -25,10 +36,12 @@ llvm::PassPluginLibraryInfo getAFLGoLinkerPluginInfo() {
               FAM.registerPass([] { return AFLGoTargetDetectionAnalysis(); });
             });
         PB.registerAnalysisRegistrationCallback([](ModuleAnalysisManager &MAM) {
-          MAM.registerPass([] { return AFLGoFunctionDistanceAnalysis(); });
-        });
-        PB.registerAnalysisRegistrationCallback([](ModuleAnalysisManager &MAM) {
-          MAM.registerPass([] { return AFLGoBasicBlockDistanceAnalysis(); });
+          MAM.registerPass([] { return ExtendedCallGraphAnalysis(); });
+          MAM.registerPass([] {
+            return AFLGoFunctionDistanceAnalysis(ClExtendCG, ClHawkeyeDistance);
+          });
+          MAM.registerPass(
+              [] { return AFLGoBasicBlockDistanceAnalysis(ClExtendCG); });
         });
 
         PB.registerFullLinkTimeOptimizationLastEPCallback(

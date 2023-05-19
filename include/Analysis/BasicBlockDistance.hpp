@@ -9,6 +9,8 @@ namespace llvm {
 
 class AFLGoBasicBlockDistanceAnalysis
     : public AnalysisInfoMixin<AFLGoBasicBlockDistanceAnalysis> {
+  bool UseExtendedCG;
+
 public:
   static AnalysisKey Key;
 
@@ -30,6 +32,9 @@ public:
 
     BBToDistanceTy computeBBDistances(Function &F);
   };
+
+  AFLGoBasicBlockDistanceAnalysis(bool UseExtendedCG)
+      : UseExtendedCG(UseExtendedCG) {}
 
   Result run(Module &F, ModuleAnalysisManager &FAM);
 };
