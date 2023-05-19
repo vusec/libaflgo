@@ -97,6 +97,10 @@ def check_resources():
         check_resource(resource)
 
 
+def is_hawkeye():
+    return "AFLGO_HAWKEYE" in os.environ
+
+
 # The flags that match the following regular expressions should not be forwarded
 ORIGINAL_FLAGS_BLACKLIST = []
 
@@ -114,15 +118,18 @@ COMPILER_FLAGS = [
     "-load",
     "-Xclang",
     str(AFLGO_COMPILER_PLUGIN_PATH),
-    "-Xclang",
-    "-no-opaque-pointers",
 ]
 
 
 def generate_compiler_flags(targets, is_asm):
     compiler_flags = COMPILER_FLAGS[:]
+
     if not is_asm:
         compiler_flags += ["-mllvm", f"-targets={targets}"]
+
+    if is_hawkeye():
+        compiler_flags += ["-Xclang", "-no-opaque-pointers"]
+
     return compiler_flags
 
 
@@ -133,7 +140,6 @@ COMPILER_CXX_FLAGS = []
 LINKER_FORWARD_FLAGS = [
     f"--load-pass-plugin={AFLGO_LINKER_PLUGIN_PATH}",
     f"-mllvm=-load={AFLGO_LINKER_PLUGIN_PATH}",
-    "-plugin-opt=no-opaque-pointers",
 ]
 LINKER_FLAGS = [
     "-fuse-ld=lld",
@@ -141,8 +147,21 @@ LINKER_FLAGS = [
 
 
 def generate_linker_flags():
+    linker_forward_flags = LINKER_FORWARD_FLAGS[:]
+    if is_hawkeye():
+        linker_forward_flags += [
+            "-plugin-opt=no-opaque-pointers",
+            "-mllvm",
+            "-extend-cg",
+            "-mllvm",
+            "-use-hawkeye-distance",
+            "-mllvm",
+            "-trace-function-distance",
+        ]
+
     flags = LINKER_FLAGS[:]
-    flags.append(f"-Wl,{','.join(LINKER_FORWARD_FLAGS[:])}")
+    flags.append(f"-Wl,{','.join(linker_forward_flags)}")
+
     return flags
 
 
