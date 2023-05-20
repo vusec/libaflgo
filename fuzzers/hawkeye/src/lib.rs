@@ -35,7 +35,7 @@ use libafl::{
         StdMOptMutator, StdScheduledMutator, Tokens,
     },
     observers::{HitcountsMapObserver, TimeObserver},
-    schedulers::{IndexesLenTimeMinimizerScheduler, StdWeightedScheduler},
+    schedulers::IndexesLenTimeMinimizerScheduler,
     stages::{calibrate::CalibrationStage, StdMutationalStage, TracingStage},
     state::{HasCorpus, HasMetadata, StdState},
     Error,
@@ -47,7 +47,8 @@ use libafl_targets::{
 };
 
 use libaflgo::{
-    CoolingSchedule, DistanceFeedback, DistancePowerMutationalStage, SimilarityFeedback,
+    CoolingSchedule, DistanceFeedback, DistancePowerMutationalStage, DistanceWeightedScheduler,
+    SimilarityFeedback,
 };
 use libaflgo_targets::{
     distance::InProcessDistanceObserver, similarity::InProcessSimilarityObserver,
@@ -323,7 +324,7 @@ fn fuzz<P: AsRef<Path>>(
     let power = DistancePowerMutationalStage::new(mutator);
 
     // A minimization+queue policy to get testcasess from the corpus
-    let scheduler = IndexesLenTimeMinimizerScheduler::new(StdWeightedScheduler::new(
+    let scheduler = IndexesLenTimeMinimizerScheduler::new(DistanceWeightedScheduler::new(
         &mut state,
         &edges_observer,
     ));

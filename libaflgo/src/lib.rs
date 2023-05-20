@@ -6,7 +6,10 @@ use libafl::{
         current_time, Event, EventFirer, ExitKind, Feedback, Named, Observer, ObserversTuple,
         Testcase, UserStats, UsesInput,
     },
-    schedulers::{testcase_score::CorpusPowerTestcaseScore, TestcaseScore},
+    schedulers::{
+        testcase_score::{CorpusPowerTestcaseScore, CorpusWeightTestcaseScore},
+        TestcaseScore, WeightedScheduler,
+    },
     stages::PowerMutationalStage,
     state::{HasClientPerfMonitor, HasCorpus, HasMetadata, HasNamedMetadata},
     Error,
@@ -527,3 +530,47 @@ where
 
 pub type DistancePowerMutationalStage<E, EM, I, M, Z> =
     PowerMutationalStage<E, DistancePowerTestcaseScore, EM, I, M, Z>;
+
+pub struct DistanceWeightTestcaseScore;
+
+impl<S> TestcaseScore<S> for DistanceWeightTestcaseScore
+where
+    S: HasCorpus + HasMetadata,
+{
+    /// Compute the `weight` used in weighted corpus entry selection algo
+    #[allow(clippy::cast_precision_loss, clippy::cast_lossless)]
+    fn compute(state: &S, entry: &mut Testcase<S::Input>) -> Result<f64, Error> {
+        let mut weight = CorpusWeightTestcaseScore::compute(state, entry)?;
+
+        let test_case_metadata = entry.metadata::<DistanceTestcaseMetadata>()?;
+        let test_case_distance = test_case_metadata.distance();
+        if !test_case_distance.is_finite() {
+            // If the distance from the target is unknown, fall back to AFL-like scheduling.
+            return Ok(weight);
+        }
+
+        let distance_metadata = state.metadata::<DistanceMetadata>()?;
+        let Some(norm_distance) = distance_metadata.normalize(test_case_distance) else { return Ok(weight); };
+
+        let mut p = 1.0 - norm_distance;
+
+        if let Ok(similarity_metadata) = entry.metadata::<SimilarityTestcaseMetadata>() {
+            let test_case_similarity = similarity_metadata.similarity();
+            // If distance is finite, similarity has to be as well.
+            assert!(test_case_similarity.is_finite());
+
+            let similarity_metadata = state.metadata::<SimilarityMetadata>()?;
+            // If distance range was present, similarity range has to be as well.
+            let norm_similarity = similarity_metadata.normalize(test_case_similarity).unwrap();
+
+            p *= norm_similarity;
+        }
+
+        weight *= p;
+
+        assert!(weight.is_normal());
+        Ok(weight)
+    }
+}
+
+pub type DistanceWeightedScheduler<O, S> = WeightedScheduler<DistanceWeightTestcaseScore, O, S>;
