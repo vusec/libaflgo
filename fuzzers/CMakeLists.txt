@@ -57,8 +57,9 @@ foreach(FUZZER ${FUZZERS})
       OUTPUT "libaflgo_${FUZZER}_cc_test"
       INPUT "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_${FUZZER}_cc_test.gen")
 
-    add_custom_target("build_libaflgo_${FUZZER}_cxx_test" ALL
-                      DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_${FUZZER}_cxx_test")
+    add_custom_target(
+      "build_libaflgo_${FUZZER}_cxx_test" ALL
+      DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_${FUZZER}_cxx_test")
     add_custom_command(
       OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libaflgo_${FUZZER}_cxx_test"
       COMMAND
