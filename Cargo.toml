@@ -1,5 +1,5 @@
 [workspace]
-members = ["libaflgo_targets", "libaflgo", "fuzzers/aflgo"]
+members = ["libaflgo_targets", "libaflgo", "fuzzers/aflgo", "fuzzers/hawkeye"]
 default-members = ["libaflgo_targets", "libaflgo"]
 
 [workspace.dependencies]

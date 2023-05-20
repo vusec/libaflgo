@@ -1,0 +1,21 @@
+[package]
+name = "hawkeye"
+version = "0.1.0"
+authors = ["Elia Geretto <e.geretto@vu.nl"]
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.2.1", features = ["derive"] }
+libafl = { workspace = true }
+libafl_targets = { workspace = true, features = [
+	"sancov_pcguard_hitcounts",
+	"sancov_cmplog",
+	"libfuzzer",
+] }
+libaflgo = { path = "../../libaflgo" }
+libaflgo_targets = { path = "../../libaflgo_targets" }
+mimalloc = "0.1.36"
+nix = "0.26.2"
+
+[lib]
+crate-type = ["staticlib"]
