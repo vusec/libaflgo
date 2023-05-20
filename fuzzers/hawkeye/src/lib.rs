@@ -399,10 +399,11 @@ fn fuzz<P: AsRef<Path>>(
                 &mut mgr,
                 &[seed_dir.as_ref().to_path_buf()],
             )
-            .unwrap_or_else(|_| {
+            .unwrap_or_else(|error| {
                 println!(
-                    "Failed to load initial corpus: {}",
-                    seed_dir.as_ref().display()
+                    "Failed to load initial corpus in {}: {}",
+                    seed_dir.as_ref().display(),
+                    error,
                 );
                 process::exit(0);
             });
