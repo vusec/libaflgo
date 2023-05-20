@@ -3,6 +3,7 @@
 #include "SVF-LLVM/LLVMModule.h"
 #include "SVF-LLVM/SVFIRBuilder.h"
 #include "SVFIR/SVFIR.h"
+#include "Util/Options.h"
 #include "WPA/Andersen.h"
 
 #include <memory>
@@ -14,6 +15,10 @@ AnalysisKey ExtendedCallGraphAnalysis::Key;
 
 ExtendedCallGraphAnalysis::Result
 ExtendedCallGraphAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
+  // There is no other way to disable printing inside SVF.
+  auto &PrintOption = const_cast<Option<bool> &>(SVF::Options::PStat);
+  PrintOption.setValue(false);
+
   // We need to modify our own copy of the call graph to avoid breaking other
   // LLVM passes. This call graph is useful only to us anyway.
   auto LLVMCallGraph = CallGraph(M);
