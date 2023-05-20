@@ -1,5 +1,5 @@
 [package]
-name = "fuzzer_aflgo"
+name = "aflgo"
 version = "0.1.0"
 authors = ["Elia Geretto <e.geretto@vu.nl"]
 edition = "2021"
@@ -12,8 +12,8 @@ libafl_targets = { workspace = true, features = [
 	"sancov_cmplog",
 	"libfuzzer",
 ] }
-libaflgo = { path = "../libaflgo" }
-libaflgo_targets = { path = "../libaflgo_targets" }
+libaflgo = { path = "../../libaflgo" }
+libaflgo_targets = { path = "../../libaflgo_targets" }
 mimalloc = "0.1.36"
 nix = "0.26.2"
 

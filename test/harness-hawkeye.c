@@ -1,5 +1,5 @@
 // RUN: printf '%s:14\n%s:22' > %t.targets.txt
-// RUN: AFLGO_HAWKEYE=true AFLGO_TARGETS=%t.targets.txt %libaflgo_cc_test %s -o %t -Wl,-save-temps
+// RUN: AFLGO_HAWKEYE=true AFLGO_TARGETS=%t.targets.txt %libaflgo_hawkeye_cc_test %s -o %t -Wl,-save-temps
 // RUN: %llvm-dis %t.0.5.precodegen.bc
 // RUN: cat %t.0.5.precodegen.ll | %FileCheck %s
 

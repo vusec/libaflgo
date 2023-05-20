@@ -1,5 +1,5 @@
 // RUN: echo '%s:17' > %t.targets.txt
-// RUN: AFLGO_TARGETS=%t.targets.txt %libaflgo_cc_test %s -o %t -Wl,-save-temps
+// RUN: AFLGO_TARGETS=%t.targets.txt %libaflgo_aflgo_cc_test %s -o %t -Wl,-save-temps
 // RUN: %llvm-dis %t.0.5.precodegen.bc
 // RUN: mkdir -p %t.input
 // RUN: echo 'yolo' > %t.input/yolo.txt

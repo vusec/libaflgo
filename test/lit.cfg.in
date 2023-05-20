@@ -53,25 +53,35 @@ config.substitutions.append(("%llvm-dis", f"{tools_dir}/llvm-dis"))
 python_interpreter = Path("@Python3_EXECUTABLE@")
 assert python_interpreter.is_file()
 
-test_cc_wrapper_path = Path("@TEST_CC_WRAPPER_PATH@")
-if not test_cc_wrapper_path.is_file():
-    print(f"Test wrapper not found: {test_cc_wrapper_path}")
-    exit(1)
+fuzzers = "@FUZZERS@".split(";")
+test_cc_wrapper_paths = [
+    Path(test_cc_wrapper_path)
+    for test_cc_wrapper_path in "@TEST_CC_WRAPPER_PATHS@".split(";")
+]
+test_cxx_wrapper_paths = [
+    Path(test_cxx_wrapper_path)
+    for test_cxx_wrapper_path in "@TEST_CXX_WRAPPER_PATHS@".split(";")
+]
+for fuzzer, test_cc_wrapper_path, test_cxx_wrapper_path in zip(
+    fuzzers, test_cc_wrapper_paths, test_cxx_wrapper_paths
+):
+    if not test_cc_wrapper_path.is_file():
+        print(f"Test wrapper not found: {test_cc_wrapper_path}")
+        exit(1)
 
-test_cxx_wrapper_path = Path("@TEST_CXX_WRAPPER_PATH@")
-if not test_cxx_wrapper_path.is_file():
-    print(f"Test wrapper not found: {test_cxx_wrapper_path}")
-    exit(1)
+    if not test_cxx_wrapper_path.is_file():
+        print(f"Test wrapper not found: {test_cxx_wrapper_path}")
+        exit(1)
 
-config.substitutions.append(
-    (
-        "%libaflgo_cc_test",
-        f"AFLGO_CLANG={tools_dir}/clang {python_interpreter} {test_cc_wrapper_path} -fno-discard-value-names",
-    ),
-)
-config.substitutions.append(
-    (
-        "%libaflgo_cxx_test",
-        f"AFLGO_CLANG={tools_dir}/clang {python_interpreter} {test_cxx_wrapper_path} -fno-discard-value-names",
+    config.substitutions.append(
+        (
+            f"%libaflgo_{fuzzer}_cc_test",
+            f"AFLGO_CLANG={tools_dir}/clang {python_interpreter} {test_cc_wrapper_path} -fno-discard-value-names",
+        ),
     )
-)
+    config.substitutions.append(
+        (
+            f"%libaflgo_{fuzzer}_cxx_test",
+            f"AFLGO_CLANG={tools_dir}/clang {python_interpreter} {test_cxx_wrapper_path} -fno-discard-value-names",
+        )
+    )

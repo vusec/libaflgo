@@ -1,5 +1,6 @@
 [workspace]
-members = ["libaflgo_targets", "libaflgo", "fuzzer"]
+members = ["libaflgo_targets", "libaflgo", "fuzzers/aflgo"]
+default-members = ["libaflgo_targets", "libaflgo"]
 
 [workspace.dependencies]
 libafl = { git = "https://github.com/AFLplusplus/LibAFL.git", tag = "0.10.0" }

@@ -49,11 +49,9 @@ find_package(Python3 REQUIRED)
 set(PRINTER_PLUGIN_NAME AFLGoAnalysisPrinter)
 set(AFLGO_COMPILER_PLUGIN_NAME AFLGoCompilerPlugin)
 set(AFLGO_LINKER_PLUGIN_NAME AFLGoLTOPlugin)
-set(FUZZER_NAME fuzzer_aflgo)
 
 add_subdirectory(passes)
-add_subdirectory(fuzzer)
-add_subdirectory(wrapper)
+add_subdirectory(fuzzers)
 
 if(BUILD_TESTING)
   find_program(LIT_PROGRAM lit REQUIRED)
