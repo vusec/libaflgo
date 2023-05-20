@@ -1,6 +1,11 @@
 set(FUZZERS aflgo)
 
 foreach(FUZZER ${FUZZERS})
+  # Reset feature flags
+  unset(EXTEND_CALLGRAPH)
+  unset(USE_HAWKEYE_DISTANCE)
+  unset(TRACE_FUNCTION_DISTANCE)
+
   add_subdirectory(${FUZZER})
 
   # Corrosion does not currently support installing libraries through CMake, so
