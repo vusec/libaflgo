@@ -349,6 +349,7 @@ fn fuzz<P: AsRef<Path>>(
                 edges_observer,
                 time_observer,
                 distance_observer,
+                similarity_observer,
                 targets_observer
             ),
             &mut fuzzer,
