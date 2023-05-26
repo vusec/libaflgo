@@ -4,7 +4,7 @@
 // RUN: mkdir -p %t.input
 // RUN: echo 'yolo' > %t.input/yolo.txt
 // RUN: rm -rf %t.output
-// RUN: timeout --preserve-status 1s %t -i %t.input -o %t.output -l %t.log | %FileCheck %s
+// RUN: timeout --preserve-status 1s %t -D -i %t.input -o %t.output -l %t.log | %FileCheck %s
 
 #include <stdint.h>
 #include <stdio.h>

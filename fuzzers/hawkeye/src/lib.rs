@@ -8,6 +8,7 @@ use std::{
     env,
     fs::{self, File, OpenOptions},
     io::{self, Read, Write},
+    os::fd::AsRawFd,
     path::{Path, PathBuf},
     process::{self, exit},
     time::Duration,
@@ -17,6 +18,7 @@ use clap::{Parser, ValueEnum};
 use libafl::{
     bolts::{
         current_nanos, current_time,
+        os::dup2,
         rands::StdRand,
         shmem::{ShMemProvider, StdShMemProvider},
         tuples::{tuple_list, Merge},
@@ -78,6 +80,10 @@ struct Args {
     /// Timeout for each individual execution, in milliseconds
     #[arg(short, long, default_value = "1200")]
     timeout: u64,
+
+    /// Do not redirect stdout and stderr to /dev/null
+    #[arg(short = 'D', long)]
+    show_target_output: bool,
 
     /// Cooling schedule used for directed fuzzing
     #[arg(short = 'z', long, default_value = "exp")]
@@ -161,6 +167,7 @@ pub fn libafl_main() {
         args.tokens,
         args.logfile,
         Duration::from_millis(args.timeout),
+        args.show_target_output,
         args.cooling_schedule.0,
         Duration::from_secs(args.time_to_exploit * 60),
     ) {
@@ -200,6 +207,7 @@ fn fuzz<P: AsRef<Path>>(
     tokenfile: Option<P>,
     logfile: P,
     timeout: Duration,
+    show_target_output: bool,
     cooling_schedule: CoolingSchedule,
     time_to_exploit: Duration,
 ) -> Result<(), Error> {
@@ -209,6 +217,9 @@ fn fuzz<P: AsRef<Path>>(
             .create(true)
             .open(logfile.as_ref())?,
     );
+
+    #[cfg(unix)]
+    let file_null = File::open("/dev/null")?;
 
     // While the monitor are state, they are usually used in the broker - which is likely never restarted
     let monitor = SimpleMonitor::with_user_monitor(
@@ -411,6 +422,18 @@ fn fuzz<P: AsRef<Path>>(
             });
         println!("We imported {} inputs from disk.", state.corpus().count());
     }
+
+    // Remove target ouput (logs still survive)
+    if !show_target_output {
+        #[cfg(unix)]
+        {
+            let null_fd = file_null.as_raw_fd();
+            dup2(null_fd, io::stdout().as_raw_fd())?;
+            dup2(null_fd, io::stderr().as_raw_fd())?;
+        }
+    }
+    // reopen file to make sure we're at the end
+    log.replace(OpenOptions::new().append(true).create(true).open(logfile)?);
 
     fuzzer.fuzz_loop(&mut stages, &mut executor, &mut state, &mut mgr)?;
 
