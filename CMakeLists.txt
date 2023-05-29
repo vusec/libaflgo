@@ -30,12 +30,7 @@ include(AddLLVM)
 
 set(Z3_DIR "${z3_SOURCE_DIR}") # SVF does not use find_package for Z3
 set(SVF_ENABLE_ASSERTIONS ON CACHE BOOL "Enable SVF assertions")
-FetchContent_GetProperties(SVF)
-if(NOT svf_POPULATED)
-  FetchContent_Populate(SVF)
-  # Avoid installing SVF
-  add_subdirectory(${svf_SOURCE_DIR} ${svf_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif()
+FetchContent_MakeAvailable(SVF)
 
 # Fix SVF CMake targets
 target_include_directories(SvfCore PUBLIC "${svf_SOURCE_DIR}/svf/include"
