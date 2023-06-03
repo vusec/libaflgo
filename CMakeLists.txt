@@ -18,6 +18,8 @@ FetchContent_Declare(
   SVF
   GIT_REPOSITORY https://github.com/SVF-tools/SVF.git
   GIT_TAG 984e7593778478cb55f4f1cbef1fe9ad6b023a01 # May 16th, 2023
+  PATCH_COMMAND git checkout -- . && git clean -f . &&
+                patch --no-backup-if-mismatch -p1 -i "${PROJECT_SOURCE_DIR}/svf.patch"
 )
 FetchContent_MakeAvailable(Corrosion Z3)
 
