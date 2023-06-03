@@ -5,3 +5,9 @@ default-members = ["libaflgo_targets", "libaflgo"]
 [workspace.dependencies]
 libafl = { git = "https://github.com/AFLplusplus/LibAFL.git", tag = "0.10.1" }
 libafl_targets = { git = "https://github.com/AFLplusplus/LibAFL.git", tag = "0.10.1" }
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+debug = true
