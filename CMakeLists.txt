@@ -17,7 +17,7 @@ FetchContent_Declare(
 FetchContent_Declare(
   SVF
   GIT_REPOSITORY https://github.com/SVF-tools/SVF.git
-  GIT_TAG d047e7edd605d93c06f29f68d344df0622e9cbc6 # June 4th, 2023
+  GIT_TAG 8c7a3d6c5de7943d0c1b540c8e92e54706e0c0a4 # June 7th, 2023
 )
 FetchContent_MakeAvailable(Corrosion Z3)
 
