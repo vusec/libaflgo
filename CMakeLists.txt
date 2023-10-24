@@ -28,6 +28,8 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(AddLLVM)
 
+option(SVF_USE_DBOUT "Enable SVF debug output" OFF)
+
 set(Z3_DIR "${z3_SOURCE_DIR}") # SVF does not use find_package for Z3
 set(SVF_ENABLE_ASSERTIONS ON CACHE BOOL "Enable SVF assertions")
 FetchContent_GetProperties(SVF)
@@ -35,6 +37,13 @@ if(NOT svf_POPULATED)
   FetchContent_Populate(SVF)
   # Avoid installing SVF
   add_subdirectory(${svf_SOURCE_DIR} ${svf_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+
+if(SVF_USE_DBOUT)
+  message(STATUS "Enabling SVF debug output")
+  target_compile_definitions(SvfCore PRIVATE USE_SVF_DBOUT)
+  target_compile_definitions(SvfCoreObj PRIVATE USE_SVF_DBOUT)
+  target_compile_definitions(SvfLLVM PRIVATE USE_SVF_DBOUT)
 endif()
 
 # Fix SVF CMake targets
