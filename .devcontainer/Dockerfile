@@ -9,8 +9,10 @@ RUN apt-get update && \
 				ninja-build \
 				python3-pip
 
-RUN bash -c "$(wget -O - https://apt.kitware.com/kitware-archive.sh)" && \
-    apt-get install -y cmake
+RUN wget -O cmake.tar.gz \
+	https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4-linux-x86_64.tar.gz && \
+	tar xf cmake.tar.gz -C /usr/local --strip-components=1 && \
+	rm cmake.tar.gz
 
 RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test
 
