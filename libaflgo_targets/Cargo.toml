@@ -3,6 +3,7 @@ name = "libaflgo_targets"
 version = "0.1.0"
 authors = ["Elia Geretto <e.geretto@vu.nl"]
 edition = "2021"
+rust-version.workspace = true
 
 [dependencies]
 libaflgo = { path = "../libaflgo" }

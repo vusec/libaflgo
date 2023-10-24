@@ -3,6 +3,7 @@ name = "hawkeye"
 version = "0.1.0"
 authors = ["Elia Geretto <e.geretto@vu.nl"]
 edition = "2021"
+rust-version.workspace = true
 
 [dependencies]
 clap = { version = "4.2.1", features = ["derive"] }

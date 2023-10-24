@@ -1,6 +1,7 @@
 [workspace]
 members = ["libaflgo_targets", "libaflgo", "fuzzers/aflgo", "fuzzers/hawkeye"]
 default-members = ["libaflgo_targets", "libaflgo"]
+package.rust-version = "1.71"
 
 [workspace.dependencies]
 libafl = { git = "https://github.com/AFLplusplus/LibAFL.git", tag = "0.10.1" }
