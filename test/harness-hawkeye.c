@@ -9,7 +9,7 @@
 // CHECK: define {{.*}} @target1
 int target1(void) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 0.000000e+00)
+// CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 0)
 // CHECK-NEXT: call void @__aflgo_trace_fun_distance(double 0.000000e+00)
 	return 1;
 }
@@ -17,7 +17,7 @@ int target1(void) {
 // CHECK: define {{.*}} @target2
 int target2(void) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 0.000000e+00)
+// CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 0)
 // CHECK-NEXT: call void @__aflgo_trace_fun_distance(double 0.000000e+00)
 	return 2;
 }
@@ -25,7 +25,7 @@ int target2(void) {
 // CHECK: define {{.*}} @intermediate
 int intermediate2(void) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 1.000000e+01)
+// CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 10000)
 // CHECK-NEXT: call void @__aflgo_trace_fun_distance(double 2.250000e+00)
 	return target2();
 }
@@ -33,7 +33,7 @@ int intermediate2(void) {
 // CHECK: define {{.*}} @LLVMFuzzerTestOneInput
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 1.200000e+01)
+// CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 12000)
 // CHECK-NEXT: call void @__aflgo_trace_fun_distance(double 3.000000e+00)
 // CHECK: call void @__sanitizer_cov_trace_pc_guard
   typedef int (*val_cb)(void);
@@ -46,10 +46,10 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   int V = 0;
   if (Size > 0 && Data[0] < 2) {
 // CHECK: land.lhs.true:
-// CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 1.100000e+01)
+// CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 11000)
 
 // CHECK: if.then:
-// CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 1.000000e+01)
+// CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 10000)
 // CHECK: call void @__sanitizer_cov_trace_pc_guard
     V = Callbacks[Data[0]]();
   } else {

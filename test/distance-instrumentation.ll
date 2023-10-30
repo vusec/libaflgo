@@ -8,7 +8,7 @@ target triple = "x86_64-redhat-linux-gnu"
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @callee(i32 noundef %0) #0 !dbg !8 {
 ; CHECK: @callee
-; CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 1.000000e+00)
+; CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 1000)
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
   store i32 %0, i32* %3, align 4
@@ -19,7 +19,7 @@ define dso_local i32 @callee(i32 noundef %0) #0 !dbg !8 {
 
 6:                                                ; preds = %1
 ; CHECK: 6:
-; CHECK: call void @__aflgo_trace_bb_distance(double 0.000000e+00)
+; CHECK: call void @__aflgo_trace_bb_distance(i64 0)
   call void @__aflgo_trace_bb_target(i32 0)
   %7 = load i32, i32* %3, align 4, !dbg !19
   %8 = icmp sgt i32 %7, 7, !dbg !22
@@ -57,7 +57,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @caller(i32 noundef %0) #0 !dbg !38 {
 ; CHECK: @caller
-; CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 1.200000e+01)
+; CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 12000)
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
   store i32 %0, i32* %3, align 4
@@ -68,14 +68,14 @@ define dso_local i32 @caller(i32 noundef %0) #0 !dbg !38 {
 
 6:                                                ; preds = %1
 ; CHECK: 6:
-; CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 1.100000e+01)
+; CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 11000)
   %7 = load i32, i32* %3, align 4, !dbg !45
   %8 = icmp sgt i32 %7, 5, !dbg !48
   br i1 %8, label %9, label %11, !dbg !49
 
 9:                                                ; preds = %6
 ; CHECK: 9:
-; CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 1.000000e+01)
+; CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 10000)
   %10 = call i32 @callee(i32 noundef 7), !dbg !50
   store i32 %10, i32* %2, align 4, !dbg !52
   br label %13, !dbg !52

@@ -24,7 +24,7 @@ public:
   int getRetVal() override {
 // CHECK: define {{.*}} i32 @_ZN4Sub29getRetValEv
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 1.000000e+01)
+// CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 10000)
     int Ret = computeRetVal();
 // CHECK: call void @__sanitizer_cov_trace_pc_guard
     return Ret;
@@ -34,7 +34,7 @@ private:
 // CHECK: define {{.*}} void @_ZN4Sub213computeRetValEv
   int computeRetVal() {
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 0.000000e+00)
+// CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 0)
 // CHECK: call void @__sanitizer_cov_trace_pc_guard
     return 2;
   }

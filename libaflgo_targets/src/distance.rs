@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use libaflgo::DistanceObserver;
 
+// XXX: this should be kept in sync with passes/AFLGoLinker/DistanceInstrumentation.cpp
 const DISTANCE_RESOLUTION: f64 = 1e3;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -21,11 +22,9 @@ impl DistanceStats {
         }
     }
 
-    pub fn add_bb_distance(&self, bb_distance: f64) {
-        let distance_approx = (bb_distance * DISTANCE_RESOLUTION).trunc() as u64;
-
+    pub fn add_bb_distance(&self, bb_distance: u64) {
         self.bb_distance_sum
-            .fetch_add(distance_approx, Ordering::Relaxed);
+            .fetch_add(bb_distance, Ordering::Relaxed);
         self.bb_distance_count.fetch_add(1, Ordering::Relaxed);
     }
 
@@ -45,7 +44,7 @@ static STATS: DistanceStats = DistanceStats::new();
 
 // Called by the distance instrumentation
 #[no_mangle]
-pub extern "C" fn __aflgo_trace_bb_distance(bb_distance: f64) {
+pub extern "C" fn __aflgo_trace_bb_distance(bb_distance: u64) {
     STATS.add_bb_distance(bb_distance);
 }
 
@@ -109,8 +108,8 @@ mod tests {
         let stats = DistanceStats::new();
         stats.reset();
 
-        stats.add_bb_distance(1.0);
-        stats.add_bb_distance(2.0);
+        stats.add_bb_distance(1 * DISTANCE_RESOLUTION as u64);
+        stats.add_bb_distance(2 * DISTANCE_RESOLUTION as u64);
 
         let test_case_distance = stats.compute_test_case_distance();
         assert_eq!(test_case_distance, 1.5);

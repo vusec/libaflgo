@@ -9,7 +9,7 @@
 
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 // CHECK: entry:
-// CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 1.000000e+00)
+// CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 1000)
 // CHECK: call void @__sanitizer_cov_trace_pc_guard
   int V = 0;
   if (Size > 5) {
@@ -17,7 +17,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     V = 1;
   } else {
 // CHECK: if.else:
-// CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 0.000000e+00)
+// CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 0)
 // CHECK: call void @__sanitizer_cov_trace_pc_guard
     V = 2;
   }

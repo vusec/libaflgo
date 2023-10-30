@@ -25,7 +25,7 @@ public:
 // CHECK: define {{.*}} @_ZN1B6getValEv
 int B::getVal() {
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 0.000000e+00)
+// CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 0)
 // CHECK-NEXT: call void @__aflgo_trace_fun_distance(double 0.000000e+00)
     return 42;
   }
@@ -33,7 +33,7 @@ int B::getVal() {
 // CHECK: define {{.*}} @LLVMFuzzerTestOneInput
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 1.500000e+01)
+// CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 15000)
 // CHECK-NEXT: call void @__aflgo_trace_fun_distance(double 2.250000e+00)
 // CHECK: call void @__sanitizer_cov_trace_pc_guard
 
@@ -42,7 +42,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     B B;
 
 // CHECK: if.then:
-// CHECK-NEXT: call void @__aflgo_trace_bb_distance(double 1.000000e+01)
+// CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 10000)
 // CHECK: call void @__sanitizer_cov_trace_pc_guard
     V = B.getVal();
   } else {

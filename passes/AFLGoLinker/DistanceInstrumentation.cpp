@@ -5,15 +5,17 @@
 
 using namespace llvm;
 
+// XXX: this should be kept in sync with libaflgo_targets/src/distance.rs
+const auto DistanceResolution = 1e3;
 const char *AFLGoTraceBBDistanceName = "__aflgo_trace_bb_distance";
 
 PreservedAnalyses
 AFLGoDistanceInstrumentationPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto &C = M.getContext();
   auto *VoidTy = Type::getVoidTy(C);
-  auto *DoubleTy = Type::getDoubleTy(C);
+  auto *Int64Ty = Type::getInt64Ty(C);
   auto AFLGoTraceBBDistance =
-      M.getOrInsertFunction(AFLGoTraceBBDistanceName, VoidTy, DoubleTy);
+      M.getOrInsertFunction(AFLGoTraceBBDistanceName, VoidTy, Int64Ty);
 
   auto &BBDistanceResult = AM.getResult<AFLGoBasicBlockDistanceAnalysis>(M);
 
@@ -28,7 +30,9 @@ AFLGoDistanceInstrumentationPass::run(Module &M, ModuleAnalysisManager &AM) {
         continue;
       }
 
-      auto *DistanceValue = ConstantFP::get(DoubleTy, BBDistances[&BB]);
+      auto Distance =
+          static_cast<uint64_t>(BBDistances[&BB] * DistanceResolution);
+      auto *DistanceValue = ConstantInt::get(Int64Ty, Distance);
       IRBuilder<> IRB(&*BB.getFirstInsertionPt());
       IRB.CreateCall(AFLGoTraceBBDistance, {DistanceValue});
     }
