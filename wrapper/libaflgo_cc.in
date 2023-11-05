@@ -143,6 +143,9 @@ LINKER_FORWARD_FLAGS = [
 ]
 LINKER_FLAGS = [
     "-fuse-ld=lld",
+    # Allows complete stack unwinding when using lld, see
+    # https://bugs.chromium.org/p/chromium/issues/detail?id=919499#c16
+    "-Wl,--no-rosegment",
 ]
 
 
