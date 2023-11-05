@@ -3,7 +3,6 @@
 import sys
 import os
 import subprocess
-import re
 from pathlib import Path
 
 # The list of immediate args has been taken from Driver::HandleImmediateArgs
@@ -215,7 +214,7 @@ def check_asm(args):
 
 
 def wrapper_main(argv):
-    cpp_mode = "cxx" in sys.argv[0]
+    cpp_mode = "cxx" in argv[0]
 
     targets_path = get_targets_path()
 
@@ -226,10 +225,10 @@ def wrapper_main(argv):
         else clang.with_name(clang.name.replace("clang", "clang++"))
     )
 
-    is_asm = check_asm(sys.argv[1:])
+    is_asm = check_asm(argv[1:])
 
     original_args = []
-    for flag in sys.argv[1:]:
+    for flag in argv[1:]:
         blacklisted = False
         for blacklisted_regex in ORIGINAL_FLAGS_BLACKLIST:
             if blacklisted_regex.fullmatch(flag) is not None:
