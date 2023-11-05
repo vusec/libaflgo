@@ -15,7 +15,7 @@ libafl_targets = { workspace = true, features = [
 ] }
 libaflgo = { path = "../../libaflgo" }
 libaflgo_targets = { path = "../../libaflgo_targets" }
-mimalloc = "0.1.36"
+mimalloc = { version = "*", default-features = false }
 nix = "0.26.2"
 
 [lib]
