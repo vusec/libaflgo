@@ -282,7 +282,7 @@ def flags_main(args):
     elif args.linker:
         linker_flags = generate_linker_flags()
         if cpp_mode:
-            linker_flags += LINKER_CXX_FLAGS()
+            linker_flags += LINKER_CXX_FLAGS
 
         if not args.lib:
             linker_flags += EXE_LINKER_FLAGS
