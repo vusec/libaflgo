@@ -4,8 +4,9 @@ default-members = ["libaflgo_targets", "libaflgo"]
 package.rust-version = "1.71"
 
 [workspace.dependencies]
-libafl = { git = "https://github.com/AFLplusplus/LibAFL.git", tag = "0.10.1" }
-libafl_targets = { git = "https://github.com/AFLplusplus/LibAFL.git", tag = "0.10.1" }
+# LibAFL version 0.10.1
+libafl = { git = "ssh://git@github.com/vusec/LibAFL-directed.git" }
+libafl_targets = { git = "ssh://git@github.com/vusec/LibAFL-directed.git" }
 
 [profile.release]
 lto = true
