@@ -55,6 +55,31 @@ set_target_properties(SvfCoreObj SvfCore SvfLLVM
 
 find_package(Python3 REQUIRED)
 
+corrosion_import_crate(MANIFEST_PATH wrapper/libafl_cc_libs/Cargo.toml
+                       CRATE_TYPES bin CRATES libafl_cc_libs)
+
+# TODO: make extension variable
+set(CMPLOG_RTN_PLUGIN_FILE_NAME cmplog-rtn-plugin.so)
+add_custom_target(
+  CmpLogRtnPass ALL
+  COMMAND $<TARGET_FILE:libafl_cc_libs> cmplog-rtn
+          ${CMPLOG_RTN_PLUGIN_FILE_NAME}
+  BYPRODUCTS ${CMPLOG_RTN_PLUGIN_FILE_NAME}
+  DEPENDS libafl_cc_libs)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${CMPLOG_RTN_PLUGIN_FILE_NAME}
+        TYPE LIB)
+
+# TODO: make extension variable
+set(AUTOTOKENS_PLUGIN_FILE_NAME autotokens-plugin.so)
+add_custom_target(
+  AutoTokensPass ALL
+  COMMAND $<TARGET_FILE:libafl_cc_libs> autotokens
+          ${AUTOTOKENS_PLUGIN_FILE_NAME}
+  BYPRODUCTS ${AUTOTOKENS_PLUGIN_FILE_NAME}
+  DEPENDS libafl_cc_libs)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${AUTOTOKENS_PLUGIN_FILE_NAME}
+        TYPE LIB)
+
 set(PRINTER_PLUGIN_NAME AFLGoAnalysisPrinter)
 set(AFLGO_COMPILER_PLUGIN_NAME AFLGoCompilerPlugin)
 set(AFLGO_LINKER_PLUGIN_NAME AFLGoLTOPlugin)

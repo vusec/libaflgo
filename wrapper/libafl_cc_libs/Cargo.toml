@@ -1,0 +1,9 @@
+[package]
+name = "libafl_cc_libs"
+version = "0.1.0"
+authors = ["Andrea Jemmett <a.jemmett@vu.nl"]
+edition = "2021"
+rust-version.workspace = true
+
+[dependencies]
+libafl_cc = { workspace = true }

@@ -1,11 +1,18 @@
 [workspace]
-members = ["libaflgo_targets", "libaflgo", "fuzzers/aflgo", "fuzzers/hawkeye"]
+members = [
+    "libaflgo_targets",
+    "libaflgo",
+    "wrapper/libafl_cc_libs",
+    "fuzzers/aflgo",
+    "fuzzers/hawkeye",
+]
 default-members = ["libaflgo_targets", "libaflgo"]
 package.rust-version = "1.71"
 
 [workspace.dependencies]
 # LibAFL version 0.10.1
 libafl = { git = "ssh://git@github.com/vusec/LibAFL-directed.git" }
+libafl_cc = { git = "ssh://git@github.com/vusec/LibAFL-directed.git" }
 libafl_targets = { git = "ssh://git@github.com/vusec/LibAFL-directed.git" }
 
 [profile.release]

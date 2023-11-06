@@ -76,6 +76,8 @@ def is_shared(args):
 
 AFLGO_COMPILER_PLUGIN_PATH = Path("@LIBAFLGO_COMPILER_PLUGIN_PATH@")
 AFLGO_LINKER_PLUGIN_PATH = Path("@LIBAFLGO_LINKER_PLUGIN_PATH@")
+LIBAFL_CMPLOG_RTN_PLUGIN_PATH = Path("@LIBAFL_CMPLOG_RTN_PLUGIN_PATH@")
+LIBAFL_AUTOTOKENS_PLUGIN_PATH = Path("@LIBAFL_AUTOTOKENS_PLUGIN_PATH@")
 FUZZER_PATH = Path("@FUZZER_PATH@")
 
 # Feature flags
@@ -101,6 +103,16 @@ def check_resources():
         check_resource(resource)
 
 
+def compiler_plugin_flags(plugin_path):
+    return [
+        f"-fpass-plugin={plugin_path}",
+        "-Xclang",
+        "-load",
+        "-Xclang",
+        str(plugin_path),
+    ]
+
+
 # The flags that match the following regular expressions should not be forwarded
 ORIGINAL_FLAGS_BLACKLIST = []
 
@@ -112,13 +124,12 @@ COMPILER_FLAGS_EARLY = []
 COMPILER_FLAGS = [
     "-g",  # required for targeting
     "-flto",
-    "-fsanitize-coverage=trace-pc-guard",
-    f"-fpass-plugin={AFLGO_COMPILER_PLUGIN_PATH}",
-    "-Xclang",
-    "-load",
-    "-Xclang",
-    str(AFLGO_COMPILER_PLUGIN_PATH),
-]
+    "-fsanitize-coverage=trace-pc-guard,trace-cmp",
+] + (
+    compiler_plugin_flags(AFLGO_COMPILER_PLUGIN_PATH)
+    + compiler_plugin_flags(LIBAFL_AUTOTOKENS_PLUGIN_PATH)
+    + compiler_plugin_flags(LIBAFL_CMPLOG_RTN_PLUGIN_PATH)
+)
 
 
 def generate_compiler_flags(targets, is_asm):
