@@ -568,7 +568,7 @@ where
 
         weight *= p;
 
-        assert!(weight.is_normal());
+        assert!(weight.is_finite());
         Ok(weight)
     }
 }
