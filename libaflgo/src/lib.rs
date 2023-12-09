@@ -509,9 +509,10 @@ where
 
             let similarity_metadata = state.metadata::<SimilarityMetadata>()?;
             // If distance range was present, similarity range has to be as well.
-            let norm_similarity = similarity_metadata.normalize(test_case_similarity).unwrap();
-
-            p *= norm_similarity;
+            // `min_similarity` can be equal to `max_similarity`, so normalized similarity can be None.
+            if let Some(norm_similarity) = similarity_metadata.normalize(test_case_similarity) {
+                p *= norm_similarity;
+            }
         }
 
         p = p * (1.0 - t_schedule) + 0.5 * t_schedule;
@@ -561,9 +562,10 @@ where
 
             let similarity_metadata = state.metadata::<SimilarityMetadata>()?;
             // If distance range was present, similarity range has to be as well.
-            let norm_similarity = similarity_metadata.normalize(test_case_similarity).unwrap();
-
-            p *= norm_similarity;
+            // `min_similarity` can be equal to `max_similarity`, so normalized similarity can be None.
+            if let Some(norm_similarity) = similarity_metadata.normalize(test_case_similarity) {
+                p *= norm_similarity;
+            }
         }
 
         weight *= p;
