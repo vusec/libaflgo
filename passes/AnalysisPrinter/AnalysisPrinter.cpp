@@ -56,9 +56,9 @@ public:
 
     OS << "function_name,target_count\n";
     for (auto &F : M) {
-      auto Targets = FAM.getResult<AFLGoTargetDetectionAnalysis>(F);
-      if (Targets.size()) {
-        OS << formatv("{0},{1}\n", F.getName(), Targets.size());
+      auto &Targets = FAM.getResult<AFLGoTargetDetectionAnalysis>(F);
+      if (Targets.BBs.size()) {
+        OS << formatv("{0},{1}\n", F.getName(), Targets.BBs.size());
       }
     }
 

@@ -199,8 +199,8 @@ AFLGoFunctionDistanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
 
   std::map<Function *, std::vector<double>> DistancesFromTargets;
   for (auto &F : M) {
-    auto BBTargets = FAM.getResult<AFLGoTargetDetectionAnalysis>(F);
-    if (BBTargets.empty()) {
+    auto Targets = FAM.getResult<AFLGoTargetDetectionAnalysis>(F);
+    if (Targets.BBs.empty()) {
       // F is not a target.
       continue;
     }

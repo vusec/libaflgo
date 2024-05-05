@@ -38,8 +38,8 @@ AFLGoBasicBlockDistanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
 
     SmallDenseMap<BasicBlock *, double, 16> OriginBBs;
 
-    auto &TargetBBs = FAM.getResult<AFLGoTargetDetectionAnalysis>(F);
-    for (auto &TargetBBPair : TargetBBs) {
+    auto &Targets = FAM.getResult<AFLGoTargetDetectionAnalysis>(F);
+    for (auto &TargetBBPair : Targets.BBs) {
       auto *TargetBB = TargetBBPair.first;
       OriginBBs[TargetBB] = 0;
     }

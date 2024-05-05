@@ -98,12 +98,10 @@ PreservedAnalyses AFLGoTargetInjectionPass::run(Module &M,
           if (Target.matches(*Loc)) {
             Seen.insert(&Target);
             BBIsTarget = true;
+            I.addAnnotationMetadata(
+                AFLGoTargetDetectionAnalysis::TargetInstructionAnnotation);
             break;
           }
-        }
-
-        if (BBIsTarget) {
-          break;
         }
       }
 
