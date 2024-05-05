@@ -1,6 +1,7 @@
 #include <AFLGoCompiler/TargetInjection.hpp>
 #include <Analysis/TargetDetection.hpp>
 
+#include <llvm/ADT/SmallSet.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/IRBuilder.h>
@@ -77,6 +78,8 @@ PreservedAnalyses AFLGoTargetInjectionPass::run(Module &M,
   auto AFLGoTraceBBTarget = M.getOrInsertFunction(
       AFLGoTargetDetectionAnalysis::TargetFunctionName, VoidTy, Int32Ty);
 
+  SmallSetVector<Target *, 16> Seen;
+
   for (auto &F : M) {
     if (F.isDeclaration()) {
       continue;
@@ -93,6 +96,7 @@ PreservedAnalyses AFLGoTargetInjectionPass::run(Module &M,
 
         for (auto &Target : Targets) {
           if (Target.matches(*Loc)) {
+            Seen.insert(&Target);
             BBIsTarget = true;
             break;
           }
@@ -109,6 +113,15 @@ PreservedAnalyses AFLGoTargetInjectionPass::run(Module &M,
         IRB.CreateCall(AFLGoTraceBBTarget, {TargetIDPlaceholder});
       }
     }
+  }
+
+  for (auto &Target : Targets) {
+    if (!Seen.count(&Target)) {
+      errs() << "Target not found: " << Target << '\n';
+    }
+  }
+  if (Targets.size() != Seen.size()) {
+    report_fatal_error("Not all targets were found.");
   }
 
   return PreservedAnalyses::none();
