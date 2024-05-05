@@ -15,6 +15,8 @@ class AFLGoTargetInjectionPass
     Target(std::string File, unsigned int Line) : File(File), Line(Line) {}
 
     bool matches(const DILocation &Loc);
+
+    operator std::string() const { return File + ":" + std::to_string(Line); }
   };
 
   SmallVector<Target, 16> Targets;
