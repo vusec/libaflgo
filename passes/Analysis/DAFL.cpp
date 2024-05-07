@@ -1,7 +1,6 @@
 #include <Analysis/DAFL.hpp>
 #include <Analysis/TargetDetection.hpp>
 
-// #include "AbstractExecution/SVFIR2ItvExeState.h"
 #include "Graphs/IRGraph.h"
 #include "Graphs/VFG.h"
 #include "Graphs/VFGEdge.h"
@@ -211,8 +210,6 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
        SVFGNodeIt != SVFGNodeItEnd; ++SVFGNodeIt) {
     auto *Node = SVFGNodeIt->second;
 
-    // FileLine NodeLoc;
-    // auto NodeHasLoc = getDebugFileLine(Node, NodeLoc);
     auto *NodeSVFVal = Node->getValue();
     auto *NodeVal =
         NodeSVFVal ? LLVMModuleSet->getLLVMValue(NodeSVFVal) : nullptr;
