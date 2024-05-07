@@ -1,4 +1,5 @@
 #include <Analysis/BasicBlockDistance.hpp>
+#include <Analysis/DAFL.hpp>
 #include <Analysis/ExtendedCallGraph.hpp>
 #include <Analysis/FunctionDistance.hpp>
 #include <Analysis/TargetDetection.hpp>
@@ -21,6 +22,11 @@ static cl::opt<bool>
     ClHawkeyeDistance("use-hawkeye-distance",
                       cl::desc("Use Hawkeye function distance definition"),
                       cl::init(false));
+
+static cl::opt<bool>
+    ClDAFLDebug("dafl-debug",
+                cl::desc("Save debug files for DAFL instrumentation"),
+                cl::init(false));
 
 class AFLGoFunctionDistancePrinterPass
     : public PassInfoMixin<AFLGoFunctionDistancePrinterPass> {
@@ -93,6 +99,34 @@ public:
   }
 };
 
+class DAFLProximityPrinterPass : public PassInfoMixin<DAFLProximityPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit DAFLProximityPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
+    auto &DAFL = MAM.getResult<DAFLAnalysis>(M);
+
+    OS << "score,fn,bb\n";
+    for (const auto &BBWeightPair : *DAFL) {
+      auto *BB = BBWeightPair.first;
+      auto Weight = BBWeightPair.second;
+      DILocation *Loc;
+      for (auto &I : *BB) {
+        Loc = I.getDebugLoc().get();
+        if (Loc && !Loc->getFilename().empty() && Loc->getLine() > 0) {
+          break;
+        }
+      }
+      OS << formatv("{0},{1},{2}:{3}\n", Weight, BB->getParent()->getName(),
+                    Loc ? Loc->getFilename() : "n/a", Loc ? Loc->getLine() : 0);
+    }
+
+    return PreservedAnalyses::all();
+  }
+};
+
 llvm::PassPluginLibraryInfo getAFLGoAnalysisPrinterPluginInfo() {
   return {
       LLVM_PLUGIN_API_VERSION, "AFLGoAnalysisPrinter", LLVM_VERSION_STRING,
@@ -109,6 +143,7 @@ llvm::PassPluginLibraryInfo getAFLGoAnalysisPrinterPluginInfo() {
           });
           MAM.registerPass(
               [] { return AFLGoBasicBlockDistanceAnalysis(ClExtendCG); });
+          MAM.registerPass([] { return DAFLAnalysis("", ClDAFLDebug); });
         });
 
         PB.registerPipelineParsingCallback(
@@ -126,6 +161,11 @@ llvm::PassPluginLibraryInfo getAFLGoAnalysisPrinterPluginInfo() {
 
               if (Name == "print-aflgo-basic-block-distance") {
                 MPM.addPass(AFLGoBasicBlockDistancePrinterPass(dbgs()));
+                return true;
+              }
+
+              if (Name == "print-dafl-proximity") {
+                MPM.addPass(DAFLProximityPrinterPass(dbgs()));
                 return true;
               }
 
