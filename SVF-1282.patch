@@ -1,0 +1,84 @@
+From 6604ef7f0fca1e7931251b42a15a1ed5c3310e53 Mon Sep 17 00:00:00 2001
+From: jumormt <jumormt@163.com>
+Date: Tue, 12 Dec 2023 20:46:11 +1100
+Subject: [PATCH] connect actual to formal vfgnode for full svfg
+
+---
+ svf/lib/Graphs/SVFG.cpp | 8 ++++----
+ svf/lib/Graphs/VFG.cpp  | 8 ++++----
+ 2 files changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/svf/lib/Graphs/SVFG.cpp b/svf/lib/Graphs/SVFG.cpp
+index 2795a6ec0..b417fba47 100644
+--- a/svf/lib/Graphs/SVFG.cpp
++++ b/svf/lib/Graphs/SVFG.cpp
+@@ -595,7 +595,7 @@ void SVFG::getInterVFEdgesForIndirectCallSite(const CallICFGNode* callICFGNode,
+         {
+             const PAGNode *cs_arg = *csArgIt;
+             const PAGNode *fun_arg = *funArgIt;
+-            if (fun_arg->isPointer() && cs_arg->isPointer())
++            if (isInterestedPAGNode(fun_arg) && isInterestedPAGNode(cs_arg))
+                 getInterVFEdgeAtIndCSFromAPToFP(cs_arg, fun_arg, callICFGNode, csId, edges);
+         }
+         assert(funArgIt == funArgEit && "function has more arguments than call site");
+@@ -603,12 +603,12 @@ void SVFG::getInterVFEdgesForIndirectCallSite(const CallICFGNode* callICFGNode,
+         {
+             NodeID varFunArg = pag->getVarargNode(callee);
+             const PAGNode* varFunArgNode = pag->getGNode(varFunArg);
+-            if (varFunArgNode->isPointer())
++            if (isInterestedPAGNode(varFunArgNode))
+             {
+                 for (; csArgIt != csArgEit; csArgIt++)
+                 {
+                     const PAGNode *cs_arg = *csArgIt;
+-                    if (cs_arg->isPointer())
++                    if (isInterestedPAGNode(cs_arg))
+                         getInterVFEdgeAtIndCSFromAPToFP(cs_arg, varFunArgNode, callICFGNode, csId, edges);
+                 }
+             }
+@@ -620,7 +620,7 @@ void SVFG::getInterVFEdgesForIndirectCallSite(const CallICFGNode* callICFGNode,
+     {
+         const PAGNode* cs_return = pag->getCallSiteRet(retICFGNode);
+         const PAGNode* fun_return = pag->getFunRet(callee);
+-        if (cs_return->isPointer() && fun_return->isPointer())
++        if (isInterestedPAGNode(cs_return) && isInterestedPAGNode(fun_return))
+             getInterVFEdgeAtIndCSFromFRToAR(fun_return, cs_return, csId, edges);
+     }
+ 
+diff --git a/svf/lib/Graphs/VFG.cpp b/svf/lib/Graphs/VFG.cpp
+index 1d8e472fb..09ceb9743 100644
+--- a/svf/lib/Graphs/VFG.cpp
++++ b/svf/lib/Graphs/VFG.cpp
+@@ -987,7 +987,7 @@ void VFG::connectCallerAndCallee(const CallICFGNode* callBlockNode, const SVFFun
+         {
+             const PAGNode *cs_arg = *csArgIt;
+             const PAGNode *fun_arg = *funArgIt;
+-            if (fun_arg->isPointer() && cs_arg->isPointer())
++            if (isInterestedPAGNode(cs_arg) && isInterestedPAGNode(fun_arg))
+                 connectAParamAndFParam(cs_arg, fun_arg, callBlockNode, csId, edges);
+         }
+         assert(funArgIt == funArgEit && "function has more arguments than call site");
+@@ -996,12 +996,12 @@ void VFG::connectCallerAndCallee(const CallICFGNode* callBlockNode, const SVFFun
+         {
+             NodeID varFunArg = pag->getVarargNode(callee);
+             const PAGNode* varFunArgNode = pag->getGNode(varFunArg);
+-            if (varFunArgNode->isPointer())
++            if (isInterestedPAGNode(varFunArgNode))
+             {
+                 for (; csArgIt != csArgEit; csArgIt++)
+                 {
+                     const PAGNode *cs_arg = *csArgIt;
+-                    if (cs_arg->isPointer())
++                    if (isInterestedPAGNode(cs_arg))
+                         connectAParamAndFParam(cs_arg, varFunArgNode, callBlockNode, csId, edges);
+                 }
+             }
+@@ -1013,7 +1013,7 @@ void VFG::connectCallerAndCallee(const CallICFGNode* callBlockNode, const SVFFun
+     {
+         const PAGNode* cs_return = pag->getCallSiteRet(retBlockNode);
+         const PAGNode* fun_return = pag->getFunRet(callee);
+-        if (cs_return->isPointer() && fun_return->isPointer())
++        if (isInterestedPAGNode(cs_return) && isInterestedPAGNode(fun_return))
+             connectFRetAndARet(fun_return, cs_return, csId, edges);
+     }
+ }
