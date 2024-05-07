@@ -124,7 +124,6 @@ COMPILER_FLAGS_EARLY = []
 COMPILER_FLAGS = [
     "-g",  # required for targeting
     "-flto",
-    "-fsanitize-coverage=trace-pc-guard,trace-cmp",
 ] + (
     compiler_plugin_flags(AFLGO_COMPILER_PLUGIN_PATH)
     + compiler_plugin_flags(LIBAFL_AUTOTOKENS_PLUGIN_PATH)

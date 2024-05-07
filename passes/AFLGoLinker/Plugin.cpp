@@ -1,14 +1,19 @@
+#include <AFLGoLinker/DAFL.hpp>
 #include <AFLGoLinker/DistanceInstrumentation.hpp>
 #include <AFLGoLinker/FunctionDistanceInstrumentation.hpp>
 #include <AFLGoLinker/TargetInjectionFixup.hpp>
 
 #include <Analysis/BasicBlockDistance.hpp>
+#include <Analysis/DAFL.hpp>
 #include <Analysis/ExtendedCallGraph.hpp>
 #include <Analysis/FunctionDistance.hpp>
 #include <Analysis/TargetDetection.hpp>
 
+#include <llvm/IR/PassManager.h>
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Passes/PassPlugin.h>
+#include <llvm/Transforms/Instrumentation.h>
+#include <llvm/Transforms/Instrumentation/SanitizerCoverage.h>
 
 using namespace llvm;
 
@@ -27,6 +32,38 @@ static cl::opt<bool>
                             cl::desc("Add function distance tracing callbacks"),
                             cl::init(false));
 
+static cl::opt<bool> ClDAFL("dafl", cl::desc("Enable DAFL instrumentation"),
+                            cl::init(false));
+
+static cl::opt<std::string>
+    ClDAFLInputFile("dafl-input-file",
+                    cl::desc("Input file for DAFL analysis results"),
+                    cl::value_desc("filename"));
+
+static cl::opt<std::string>
+    ClDAFLOutputFile("dafl-output-file",
+                     cl::desc("Output file for DAFL analysis results"),
+                     cl::value_desc("filename"));
+
+static void addPasses(ModulePassManager &MPM) {
+  if (ClDAFL) {
+    MPM.addPass(DAFLInstrumentationPass(ClDAFLOutputFile));
+  } else {
+    if (ClTraceFunctionDistance) {
+      MPM.addPass(FunctionDistancePass());
+    }
+    MPM.addPass(AFLGoDistanceInstrumentationPass());
+  }
+
+  SanitizerCoverageOptions Options;
+  Options.CoverageType = SanitizerCoverageOptions::SCK_Edge;
+  Options.TracePCGuard = true;
+  Options.TraceCmp = true;
+  MPM.addPass(ModuleSanitizerCoveragePass(Options));
+
+  MPM.addPass(AFLGoTargetInjectionFixupPass());
+}
+
 llvm::PassPluginLibraryInfo getAFLGoLinkerPluginInfo() {
   return {
       LLVM_PLUGIN_API_VERSION, "AFLGoLinker", LLVM_VERSION_STRING,
@@ -36,6 +73,7 @@ llvm::PassPluginLibraryInfo getAFLGoLinkerPluginInfo() {
               FAM.registerPass([] { return AFLGoTargetDetectionAnalysis(); });
             });
         PB.registerAnalysisRegistrationCallback([](ModuleAnalysisManager &MAM) {
+          MAM.registerPass([] { return DAFLAnalysis(ClDAFLInputFile); });
           MAM.registerPass([] { return ExtendedCallGraphAnalysis(); });
           MAM.registerPass([] {
             return AFLGoFunctionDistanceAnalysis(ClExtendCG, ClHawkeyeDistance);
@@ -45,23 +83,13 @@ llvm::PassPluginLibraryInfo getAFLGoLinkerPluginInfo() {
         });
 
         PB.registerFullLinkTimeOptimizationLastEPCallback(
-            [](ModulePassManager &MPM, OptimizationLevel) {
-              if (ClTraceFunctionDistance) {
-                MPM.addPass(FunctionDistancePass());
-              }
-              MPM.addPass(AFLGoDistanceInstrumentationPass());
-              MPM.addPass(AFLGoTargetInjectionFixupPass());
-            });
+            [](ModulePassManager &MPM, OptimizationLevel) { addPasses(MPM); });
 
         PB.registerPipelineParsingCallback(
             [](StringRef Name, ModulePassManager &MPM,
                ArrayRef<PassBuilder::PipelineElement>) {
               if (Name == "instrument-linker-aflgo") {
-                if (ClTraceFunctionDistance) {
-                  MPM.addPass(FunctionDistancePass());
-                }
-                MPM.addPass(AFLGoDistanceInstrumentationPass());
-                MPM.addPass(AFLGoTargetInjectionFixupPass());
+                addPasses(MPM);
                 return true;
               }
 
