@@ -119,10 +119,17 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
 
   auto *LLVMModuleSet = SVF::LLVMModuleSet::getLLVMModuleSet();
   auto *SVFModule = LLVMModuleSet->buildSVFModule(M);
-  LLVMModuleSet->dumpModulesToFile(".svf.bc");
+
+  if (DebugFiles) {
+    LLVMModuleSet->dumpModulesToFile(".svf.bc");
+  }
 
   SVF::SVFIRBuilder Builder(SVFModule);
   auto *PAG = Builder.build();
+
+  if (DebugFiles) {
+    PAG->dump("pag");
+  }
 
   auto *Andersen = SVF::AndersenWaveDiff::createAndersenWaveDiff(PAG);
 
@@ -137,6 +144,10 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
   SVF::SVFG *SVFG = SvfBuilder.buildFullSVFG(Andersen);
   // updateCallGraph() is called in buildFullSVFG()->build() if true is passed
   // to SVFGBuilder constructor
+
+  if (DebugFiles) {
+    SVFG->dump("svfg");
+  }
 
   // get the target instructions
   SmallSet<const Instruction *, 32> TargetIs;
@@ -306,9 +317,6 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
       }
     }
   }
-
-  PAG->dump("pag");
-  SVFG->dump("svfg");
 
   // clean up memory
   SVF::AndersenWaveDiff::releaseAndersenWaveDiff();

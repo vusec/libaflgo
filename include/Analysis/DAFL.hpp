@@ -15,7 +15,8 @@ public:
   using WeightTy = uint64_t;
   using Result = std::unique_ptr<ValueMap<const BasicBlock *, WeightTy>>;
 
-  DAFLAnalysis(std::string InputFile) : InputFile(InputFile) {}
+  DAFLAnalysis(std::string InputFile, bool DebugFiles)
+      : InputFile(InputFile), DebugFiles(DebugFiles) {}
 
   Result run(Module &M, ModuleAnalysisManager &);
 
@@ -23,6 +24,7 @@ private:
   Result readFromFile(Module &, std::unique_ptr<MemoryBuffer> &);
 
   std::string InputFile;
+  bool DebugFiles;
 };
 
 } // namespace llvm

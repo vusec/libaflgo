@@ -35,6 +35,11 @@ static cl::opt<bool>
 static cl::opt<bool> ClDAFL("dafl", cl::desc("Enable DAFL instrumentation"),
                             cl::init(false));
 
+static cl::opt<bool>
+    ClDAFLDebug("dafl-debug",
+                cl::desc("Save debug files for DAFL instrumentation"),
+                cl::init(false));
+
 static cl::opt<std::string>
     ClDAFLInputFile("dafl-input-file",
                     cl::desc("Input file for DAFL analysis results"),
@@ -73,7 +78,8 @@ llvm::PassPluginLibraryInfo getAFLGoLinkerPluginInfo() {
               FAM.registerPass([] { return AFLGoTargetDetectionAnalysis(); });
             });
         PB.registerAnalysisRegistrationCallback([](ModuleAnalysisManager &MAM) {
-          MAM.registerPass([] { return DAFLAnalysis(ClDAFLInputFile); });
+          MAM.registerPass(
+              [] { return DAFLAnalysis(ClDAFLInputFile, ClDAFLDebug); });
           MAM.registerPass([] { return ExtendedCallGraphAnalysis(); });
           MAM.registerPass([] {
             return AFLGoFunctionDistanceAnalysis(ClExtendCG, ClHawkeyeDistance);
