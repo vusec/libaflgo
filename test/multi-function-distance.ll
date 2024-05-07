@@ -11,14 +11,14 @@ target triple = "x86_64-redhat-linux-gnu"
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @target1() #0 !dbg !8 {
   call void @__aflgo_trace_bb_target(i32 0)
-  ret void, !dbg !12
+  ret void, !dbg !12, !annotation !22
 }
 
 ; CHECK-DAG: target2,0.00
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @target2() #0 !dbg !13 {
   call void @__aflgo_trace_bb_target(i32 0)
-  ret void, !dbg !14
+  ret void, !dbg !14, !annotation !22
 }
 
 ; CHECK-DAG: caller1,1.00
@@ -66,3 +66,4 @@ attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-l
 !19 = !DILocation(line: 5, column: 3, scope: !18)
 !20 = !DILocation(line: 6, column: 3, scope: !18)
 !21 = !DILocation(line: 7, column: 1, scope: !18)
+!22 = !{!"libaflgo.target"}

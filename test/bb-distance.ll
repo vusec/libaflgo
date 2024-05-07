@@ -21,9 +21,9 @@ define dso_local i32 @callee(i32 noundef %0) #0 !dbg !8 {
 ; CHECK-DAG: callee,%6,0.00
 6:                                                ; preds = %1
   call void @__aflgo_trace_bb_target(i32 0)
-  %7 = load i32, i32* %3, align 4, !dbg !19
-  %8 = icmp sgt i32 %7, 7, !dbg !22
-  br i1 %8, label %9, label %10, !dbg !23
+  %7 = load i32, i32* %3, align 4, !dbg !19, !annotation !58
+  %8 = icmp sgt i32 %7, 7, !dbg !22, !annotation !58
+  br i1 %8, label %9, label %10, !dbg !23, !annotation !58
 
 9:                                                ; preds = %6
   store i32 1, i32* %2, align 4, !dbg !24
@@ -157,3 +157,4 @@ attributes #1 = { nocallback nofree nosync nounwind readnone speculatable willre
 !55 = !DILocation(line: 25, column: 5, scope: !56)
 !56 = distinct !DILexicalBlock(scope: !42, file: !1, line: 24, column: 10)
 !57 = !DILocation(line: 27, column: 1, scope: !38)
+!58 = !{!"libaflgo.target"}

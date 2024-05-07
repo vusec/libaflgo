@@ -8,26 +8,29 @@ target triple = "x86_64-redhat-linux-gnu"
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @target1() #0 !dbg !8 {
 ; CHECK: @target1
+; CHECK-NEXT: call void @__sanitizer_cov_trace
 ; CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 0)
 ; CHECK-NEXT: call void @__aflgo_trace_fun_distance(double 0.000000e+00)
 ; CHECK-NEXT: call void @__aflgo_trace_bb_target(i32 0)
   call void @__aflgo_trace_bb_target(i32 0)
-  ret void, !dbg !12
+  ret void, !dbg !12, !annotation !22
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @target2() #0 !dbg !13 {
 ; CHECK: @target2
+; CHECK-NEXT: call void @__sanitizer_cov_trace
 ; CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 0)
 ; CHECK-NEXT: call void @__aflgo_trace_fun_distance(double 0.000000e+00)
 ; CHECK-NEXT: call void @__aflgo_trace_bb_target(i32 1)
   call void @__aflgo_trace_bb_target(i32 0)
-  ret void, !dbg !14
+  ret void, !dbg !14, !annotation !22
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @caller1() #0 !dbg !15 {
 ; CHECK: @caller1
+; CHECK-NEXT: call void @__sanitizer_cov_trace
 ; CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 10000)
 ; CHECK-NEXT: call void @__aflgo_trace_fun_distance(double 1.000000e+00)
   call void @target1(), !dbg !16
@@ -37,6 +40,7 @@ define dso_local void @caller1() #0 !dbg !15 {
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @caller2() #0 !dbg !18 {
 ; CHECK: @caller2
+; CHECK-NEXT: call void @__sanitizer_cov_trace
 ; CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 10000)
 ; CHECK-NEXT: call void @__aflgo_trace_fun_distance(double 0x3FF5555555555555)
   call void @caller1(), !dbg !19
@@ -74,3 +78,4 @@ attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-l
 !19 = !DILocation(line: 5, column: 3, scope: !18)
 !20 = !DILocation(line: 6, column: 3, scope: !18)
 !21 = !DILocation(line: 7, column: 1, scope: !18)
+!22 = !{!"libaflgo.target"}

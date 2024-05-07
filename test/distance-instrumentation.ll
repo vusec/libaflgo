@@ -8,7 +8,9 @@ target triple = "x86_64-redhat-linux-gnu"
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @callee(i32 noundef %0) #0 !dbg !8 {
 ; CHECK: @callee
-; CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 1000)
+; CHECK-COUNT-2: {{.+}} = alloca
+; CHECK-DAG: call void @__sanitizer_cov_trace_pc
+; CHECK-DAG: call void @__aflgo_trace_bb_distance(i64 1000)
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
   store i32 %0, i32* %3, align 4
@@ -21,9 +23,9 @@ define dso_local i32 @callee(i32 noundef %0) #0 !dbg !8 {
 ; CHECK: 6:
 ; CHECK: call void @__aflgo_trace_bb_distance(i64 0)
   call void @__aflgo_trace_bb_target(i32 0)
-  %7 = load i32, i32* %3, align 4, !dbg !19
-  %8 = icmp sgt i32 %7, 7, !dbg !22
-  br i1 %8, label %9, label %10, !dbg !23
+  %7 = load i32, i32* %3, align 4, !dbg !19, !annotation !58
+  %8 = icmp sgt i32 %7, 7, !dbg !22, !annotation !58
+  br i1 %8, label %9, label %10, !dbg !23, !annotation !58
 
 9:                                                ; preds = %6
   store i32 1, i32* %2, align 4, !dbg !24
@@ -57,7 +59,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 ; Function Attrs: noinline nounwind uwtable
 define dso_local i32 @caller(i32 noundef %0) #0 !dbg !38 {
 ; CHECK: @caller
-; CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 12000)
+; CHECK-COUNT-2: {{.+}} = alloca
+; CHECK-DAG: call void @__sanitizer_cov_trace_pc
+; CHECK-DAG: call void @__aflgo_trace_bb_distance(i64 12000)
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
   store i32 %0, i32* %3, align 4
@@ -75,7 +79,8 @@ define dso_local i32 @caller(i32 noundef %0) #0 !dbg !38 {
 
 9:                                                ; preds = %6
 ; CHECK: 9:
-; CHECK-NEXT: call void @__aflgo_trace_bb_distance(i64 10000)
+; CHECK-DAG: call void @__aflgo_trace_bb_distance(i64 10000)
+; CHECK-DAG: call void @__sanitizer_cov_trace_pc
   %10 = call i32 @callee(i32 noundef 7), !dbg !50
   store i32 %10, i32* %2, align 4, !dbg !52
   br label %13, !dbg !52
@@ -160,3 +165,4 @@ attributes #1 = { nocallback nofree nosync nounwind readnone speculatable willre
 !55 = !DILocation(line: 25, column: 5, scope: !56)
 !56 = distinct !DILexicalBlock(scope: !42, file: !1, line: 24, column: 10)
 !57 = !DILocation(line: 27, column: 1, scope: !38)
+!58 = !{!"libaflgo.target"}

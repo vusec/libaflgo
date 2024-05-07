@@ -13,14 +13,14 @@ target triple = "x86_64-pc-linux-gnu"
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local i32 @target1() #0 {
   call void @__aflgo_trace_bb_target(i32 0)
-  ret i32 1
+  ret i32 1, !annotation !6
 }
 
 ; CHECK-DAG: target2,0.00
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local i32 @target2() #0 {
   call void @__aflgo_trace_bb_target(i32 0)
-  ret i32 2
+  ret i32 2, !annotation !6
 }
 
 ; CHECK-DAG: intermediate2,1.00
@@ -63,3 +63,4 @@ attributes #1 = { argmemonly nocallback nofree nounwind willreturn }
 !3 = !{i32 7, !"uwtable", i32 2}
 !4 = !{i32 7, !"frame-pointer", i32 2}
 !5 = !{!"Ubuntu clang version 15.0.7"}
+!6 = !{!"libaflgo.target"}

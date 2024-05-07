@@ -13,12 +13,12 @@ int target1(void) {
 	return 1;
 }
 
-int target2(void) {
-	return 2;
+int target2(int X) {
+	return X + 2;
 }
 
 int intermediate2(void) {
-	return target2();
+	return target2(1337);
 }
 
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
