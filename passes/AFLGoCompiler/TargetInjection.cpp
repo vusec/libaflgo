@@ -20,6 +20,11 @@ cl::opt<std::string>
                 cl::desc("Input file containing the target lines of code."),
                 cl::value_desc("targets"));
 
+cl::opt<bool>
+    SkipRealPath("skip-real-path",
+                 cl::desc("Skip real path resolution for target lines."),
+                 cl::init(false));
+
 bool AFLGoTargetInjectionPass::Target::matches(const DILocation &Loc) {
   auto Line = Loc.getLine();
   auto File = Loc.getFilename();
@@ -33,12 +38,18 @@ bool AFLGoTargetInjectionPass::Target::matches(const DILocation &Loc) {
     }
   }
 
-  auto AbsolutePath = SmallString<16>(File);
+  auto AbsolutePath = SmallString<128>(File);
   sys::fs::make_absolute(Directory, AbsolutePath);
-  auto RealPath = SmallString<16>();
-  sys::fs::real_path(AbsolutePath, RealPath);
+  StringRef FinalPath;
+  if (SkipRealPath) {
+    FinalPath = AbsolutePath;
+  } else {
+    auto RealPath = SmallString<128>();
+    sys::fs::real_path(AbsolutePath, RealPath);
+    FinalPath = RealPath;
+  }
 
-  return !RealPath.compare(this->File) && Line == this->Line;
+  return !FinalPath.compare(this->File) && Line == this->Line;
 }
 
 void AFLGoTargetInjectionPass::parseTargets(
