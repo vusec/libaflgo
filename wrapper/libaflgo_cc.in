@@ -84,6 +84,7 @@ FUZZER_PATH = Path("@FUZZER_PATH@")
 EXTEND_CALLGRAPH = "@EXTEND_CALLGRAPH@" == "TRUE"
 USE_HAWKEYE_DISTANCE = "@USE_HAWKEYE_DISTANCE@" == "TRUE"
 TRACE_FUNCTION_DISTANCE = "@TRACE_FUNCTION_DISTANCE@" == "TRUE"
+DAFL_MODE = "@DAFL_MODE@" == "TRUE"
 
 
 def check_resource(resource_file):
@@ -162,9 +163,11 @@ LINKER_FLAGS = [
 def generate_linker_flags():
     linker_forward_flags = LINKER_FORWARD_FLAGS[:]
 
+    if EXTEND_CALLGRAPH or DAFL_MODE:
+        linker_forward_flags += ["-plugin-opt=no-opaque-pointers"]
+
     if EXTEND_CALLGRAPH:
         linker_forward_flags += [
-            "-plugin-opt=no-opaque-pointers",
             "-mllvm",
             "-extend-cg",
         ]
@@ -179,6 +182,12 @@ def generate_linker_flags():
         linker_forward_flags += [
             "-mllvm",
             "-trace-function-distance",
+        ]
+
+    if DAFL_MODE:
+        linker_forward_flags += [
+            "-mllvm",
+            "-dafl",
         ]
 
     flags = LINKER_FLAGS[:]

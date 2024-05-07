@@ -16,6 +16,9 @@ use libafl::{
 };
 use serde::{Deserialize, Serialize};
 
+pub mod dafl;
+pub use dafl::{DAFLFeedback, DAFLObserver, DAFLPowerMutationalStage, DAFLWeightedScheduler};
+
 pub trait DistanceObserver<S>: Observer<S>
 where
     S: UsesInput,

@@ -5,6 +5,7 @@ members = [
     "wrapper/libafl_cc_libs",
     "fuzzers/aflgo",
     "fuzzers/hawkeye",
+    "fuzzers/dafl",
 ]
 default-members = ["libaflgo_targets", "libaflgo"]
 package.rust-version = "1.71"

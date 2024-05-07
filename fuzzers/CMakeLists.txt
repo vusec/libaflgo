@@ -1,10 +1,11 @@
-set(FUZZERS aflgo hawkeye)
+set(FUZZERS aflgo hawkeye dafl)
 
 foreach(FUZZER ${FUZZERS})
   # Reset feature flags
   unset(EXTEND_CALLGRAPH)
   unset(USE_HAWKEYE_DISTANCE)
   unset(TRACE_FUNCTION_DISTANCE)
+  unset(DAFL_MODE)
 
   add_subdirectory(${FUZZER})
 

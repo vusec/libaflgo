@@ -1,0 +1,22 @@
+[package]
+name = "dafl"
+version = "0.1.0"
+authors = ["Andrea Jemmett <a.jemmett@vu.nl"]
+edition = "2021"
+rust-version.workspace = true
+
+[dependencies]
+clap = { version = "4.2.1", features = ["derive"] }
+libafl = { workspace = true }
+libafl_targets = { workspace = true, features = [
+	"sancov_pcguard_hitcounts",
+	"sancov_cmplog",
+	"libfuzzer",
+] }
+libaflgo = { path = "../../libaflgo" }
+libaflgo_targets = { path = "../../libaflgo_targets" }
+mimalloc = { version = "*", default-features = false }
+nix = "0.26.2"
+
+[lib]
+crate-type = ["staticlib"]
