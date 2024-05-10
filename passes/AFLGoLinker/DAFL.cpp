@@ -15,10 +15,10 @@ const char *AFLGoTraceBBDAFL = "__aflgo_trace_bb_dafl";
 PreservedAnalyses DAFLInstrumentationPass::run(Module &M,
                                                ModuleAnalysisManager &AM) {
 
-  raw_ostream *Out = nullptr;
+  std::unique_ptr<raw_fd_ostream> Out = nullptr;
 
   if (OutputFile == "-") {
-    Out = &errs();
+    Out = std::make_unique<raw_fd_ostream>(sys::fs::getStderrHandle(), false);
 
   } else if (!OutputFile.empty()) {
     int FD;
@@ -35,7 +35,7 @@ PreservedAnalyses DAFLInstrumentationPass::run(Module &M,
       report_fatal_error(Err);
     }
 
-    Out = new raw_fd_ostream(FD, true);
+    Out = std::make_unique<raw_fd_ostream>(FD, true);
   }
 
   auto &C = M.getContext();
