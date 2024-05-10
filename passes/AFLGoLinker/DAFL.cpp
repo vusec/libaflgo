@@ -75,9 +75,9 @@ PreservedAnalyses DAFLInstrumentationPass::run(Module &M,
           continue;
         }
 
-        auto AbsolutePath = SmallString<32>(Loc->getFilename());
+        auto AbsolutePath = SmallString<128>(Loc->getFilename());
         sys::fs::make_absolute(Loc->getDirectory(), AbsolutePath);
-        auto RealPath = SmallString<32>();
+        auto RealPath = SmallString<128>();
         sys::fs::real_path(AbsolutePath, RealPath);
 
         *Out << formatv("{0},{1},{2}:{3}\n", Score->second, F.getName(),
