@@ -86,10 +86,20 @@ impl<
         // This reports the existing range, without including the current test
         // case since it is not yet known if it will be inserted in the queue.
 
-        let min = metadata.min_relevance();
-        let max = metadata.max_relevance();
+        if let (Some(avg), Some(min), Some(max)) = (
+            metadata.avg_relevance(),
+            metadata.min_relevance(),
+            metadata.max_relevance(),
+        ) {
+            manager.fire(
+                state,
+                Event::UpdateUserStats {
+                    name: self.name.clone() + "_avg",
+                    value: UserStats::Float(avg),
+                    phantom: PhantomData,
+                },
+            )?;
 
-        if let (Some(min), Some(max)) = (min, max) {
             manager.fire(
                 state,
                 Event::UpdateUserStats {
