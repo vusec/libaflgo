@@ -75,9 +75,9 @@ DAFLAnalysis::readFromFile(Module &M, std::unique_ptr<MemoryBuffer> &Buffer) {
         continue;
       }
 
-      auto AbsolutePath = SmallString<32>(Loc->getFilename());
+      auto AbsolutePath = SmallString<128>(Loc->getFilename());
       sys::fs::make_absolute(Loc->getDirectory(), AbsolutePath);
-      auto RealPath = SmallString<32>();
+      auto RealPath = SmallString<128>();
       sys::fs::real_path(AbsolutePath, RealPath);
 
       if (FilePath.compare(RealPath) == 0 && LineNum == Loc->getLine()) {
