@@ -25,6 +25,11 @@ cl::opt<bool>
                  cl::desc("Skip real path resolution for target lines."),
                  cl::init(false));
 
+cl::opt<bool>
+    NoTargetsNoError("targets-no-error",
+                     cl::desc("Don't error out if targets are not found."),
+                     cl::init(false));
+
 bool AFLGoTargetInjectionPass::Target::matches(const DILocation &Loc) {
   auto Line = Loc.getLine();
   auto File = Loc.getFilename();
@@ -129,7 +134,7 @@ PreservedAnalyses AFLGoTargetInjectionPass::run(Module &M,
       errs() << "Target not found: " << Target << '\n';
     }
   }
-  if (Targets.size() != Seen.size()) {
+  if (!NoTargetsNoError && Targets.size() != Seen.size()) {
     report_fatal_error("Not all targets were found.");
   }
 

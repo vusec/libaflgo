@@ -1,7 +1,7 @@
 #pragma once
 
+#include <llvm/ADT/DenseMap.h>
 #include <llvm/IR/PassManager.h>
-#include <llvm/IR/ValueMap.h>
 #include <llvm/Support/MemoryBuffer.h>
 
 #include <memory>
@@ -13,10 +13,12 @@ public:
   static AnalysisKey Key;
 
   using WeightTy = uint64_t;
-  using Result = std::unique_ptr<ValueMap<const BasicBlock *, WeightTy>>;
+  // optional because we might not have target instructions
+  using Result = Optional<DenseMap<const BasicBlock *, WeightTy>>;
 
-  DAFLAnalysis(std::string InputFile, bool DebugFiles)
-      : InputFile(InputFile), DebugFiles(DebugFiles) {}
+  DAFLAnalysis(std::string InputFile, bool NoTargetsNoError, bool DebugFiles)
+      : InputFile(InputFile), NoTargetsNoError(NoTargetsNoError),
+        DebugFiles(DebugFiles) {}
 
   Result run(Module &M, ModuleAnalysisManager &);
 
@@ -24,6 +26,7 @@ private:
   Result readFromFile(Module &, std::unique_ptr<MemoryBuffer> &);
 
   std::string InputFile;
+  bool NoTargetsNoError;
   bool DebugFiles;
 };
 

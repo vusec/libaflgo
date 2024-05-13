@@ -15,6 +15,16 @@ const char *AFLGoTraceBBDAFL = "__aflgo_trace_bb_dafl";
 PreservedAnalyses DAFLInstrumentationPass::run(Module &M,
                                                ModuleAnalysisManager &AM) {
 
+  auto &Scores = AM.getResult<DAFLAnalysis>(M);
+
+  if (!Scores.has_value()) {
+    return PreservedAnalyses::all();
+  }
+
+  if (Scores->empty()) {
+    report_fatal_error("[DAFL] unexpected empty scores map");
+  }
+
   std::unique_ptr<raw_fd_ostream> Out = nullptr;
 
   if (OutputFile == "-") {
@@ -42,8 +52,6 @@ PreservedAnalyses DAFLInstrumentationPass::run(Module &M,
   auto *VoidTy = Type::getVoidTy(C);
   auto *Int64Ty = Type::getInt64Ty(C);
   auto Fn = M.getOrInsertFunction(AFLGoTraceBBDAFL, VoidTy, Int64Ty);
-
-  auto *Scores = AM.getResult<DAFLAnalysis>(M).get();
 
   for (auto &F : M) {
     auto IsFnReachable = false;

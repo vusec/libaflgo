@@ -36,7 +36,7 @@ struct Edge {
 
 DAFLAnalysis::Result
 DAFLAnalysis::readFromFile(Module &M, std::unique_ptr<MemoryBuffer> &Buffer) {
-  auto Res = std::make_unique<Result::element_type>();
+  Result Res = Result::value_type();
   SmallVector<StringRef, 16> Lines;
   Buffer->getBuffer().split(Lines, '\n');
   for (auto Line : Lines) {
@@ -79,9 +79,8 @@ DAFLAnalysis::readFromFile(Module &M, std::unique_ptr<MemoryBuffer> &Buffer) {
 
       if (FilePath.compare(RealPath) == 0 && LineNum == Loc->getLine()) {
         auto *BB = I.getParent();
-        auto *R = Res.get();
-        if (R->find(BB) == R->end()) {
-          R->insert({BB, Score});
+        if (Res->find(BB) == Res->end()) {
+          Res->insert({BB, Score});
         } else {
           auto Err =
               formatv("Duplicate score for basic block '{0}' in function '{1}'",
@@ -117,6 +116,21 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
     return readFromFile(M, *BufferOrErr);
   }
 
+  // get the target instructions
+  SmallSet<const Instruction *, 32> TargetIs;
+  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  for (auto &F : M) {
+    auto &FTargets = FAM.getResult<AFLGoTargetDetectionAnalysis>(F);
+    TargetIs.insert(FTargets.Is.begin(), FTargets.Is.end());
+  }
+
+  if (TargetIs.empty()) {
+    if (NoTargetsNoError) {
+      return {};
+    }
+    report_fatal_error("No target instructions found from target detection");
+  }
+
   auto *LLVMModuleSet = SVF::LLVMModuleSet::getLLVMModuleSet();
   auto *SVFModule = LLVMModuleSet->buildSVFModule(M);
 
@@ -147,18 +161,6 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
 
   if (DebugFiles) {
     SVFG->dump("svfg");
-  }
-
-  // get the target instructions
-  SmallSet<const Instruction *, 32> TargetIs;
-  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  for (auto &F : M) {
-    auto &FTargets = FAM.getResult<AFLGoTargetDetectionAnalysis>(F);
-    TargetIs.insert(FTargets.Is.begin(), FTargets.Is.end());
-  }
-
-  if (TargetIs.empty()) {
-    report_fatal_error("No target instructions found from target detection");
   }
 
   // First remove intrinsics because we may end up adding to the target
@@ -364,7 +366,7 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
     MaxDist = std::max(MaxDist, KV.second);
   }
 
-  Result Res = std::make_unique<Result::element_type>();
+  Result Res = Result::value_type();
   for (auto &KV : Dist) {
     if (KV.first == SentinelNode || KV.second == UnreachableDist) {
       continue;
@@ -377,11 +379,10 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
       // score is proximity to target; higher is better
       auto Score = (MaxDist - KV.second) + 1;
       auto *BB = I->getParent();
-      auto *R = Res.get();
-      if (R->find(BB) == R->end()) {
-        R->insert({BB, Score});
+      if (Res->find(BB) == Res->end()) {
+        Res->insert({BB, Score});
       } else {
-        (*R)[BB] = std::max(Score, (*R)[BB]);
+        (*Res)[BB] = std::max(Score, (*Res)[BB]);
       }
     }
   }

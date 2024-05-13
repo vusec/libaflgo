@@ -99,7 +99,8 @@ public:
   }
 };
 
-class DAFLProximityPrinterPass : public PassInfoMixin<DAFLProximityPrinterPass> {
+class DAFLProximityPrinterPass
+    : public PassInfoMixin<DAFLProximityPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -143,7 +144,7 @@ llvm::PassPluginLibraryInfo getAFLGoAnalysisPrinterPluginInfo() {
           });
           MAM.registerPass(
               [] { return AFLGoBasicBlockDistanceAnalysis(ClExtendCG); });
-          MAM.registerPass([] { return DAFLAnalysis("", ClDAFLDebug); });
+          MAM.registerPass([] { return DAFLAnalysis("", false, ClDAFLDebug); });
         });
 
         PB.registerPipelineParsingCallback(
