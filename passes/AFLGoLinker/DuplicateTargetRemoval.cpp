@@ -32,6 +32,7 @@ PreservedAnalyses DuplicateTargetRemovalPass::run(Function &F,
           if (BBHasTarget) {
             ToRemove.push_back(CI);
           }
+          BBHasTarget = true;
         }
       }
     }
