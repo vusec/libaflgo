@@ -103,8 +103,15 @@ PreservedAnalyses AFLGoTargetInjectionPass::run(Module &M,
 
     for (auto &BB : F) {
       bool BBIsTarget = false;
+      bool BBHasTarget = false;
 
       for (auto &I : BB) {
+        if (auto const *CI = dyn_cast<CallInst>(&I)) {
+          if (CI->getCalledFunction() == AFLGoTraceBBTarget.getCallee()) {
+            BBHasTarget = true;
+          }
+        }
+
         auto *Loc = I.getDebugLoc().get();
         if (!Loc) {
           continue;
@@ -121,7 +128,7 @@ PreservedAnalyses AFLGoTargetInjectionPass::run(Module &M,
         }
       }
 
-      if (BBIsTarget) {
+      if (!BBHasTarget && BBIsTarget) {
         IRBuilder<> IRB(&*BB.getFirstInsertionPt());
         auto *TargetIDPlaceholder = IRB.getInt32(0);
         IRB.CreateCall(AFLGoTraceBBTarget, {TargetIDPlaceholder});
