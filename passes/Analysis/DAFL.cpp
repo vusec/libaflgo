@@ -57,6 +57,9 @@ DAFLAnalysis::readFromFile(Module &M, std::unique_ptr<MemoryBuffer> &Buffer) {
 
     auto *F = M.getFunction(FnName);
     if (!F || F->isDeclaration()) {
+      if (NoTargetsNoError) {
+        continue;
+      }
       auto Err = formatv("Function '{0}' not found in module", FnName);
       report_fatal_error(Err);
     }
