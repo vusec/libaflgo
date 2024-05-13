@@ -12,6 +12,7 @@
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Instructions.h>
+#include <llvm/IR/Intrinsics.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/FormatVariadic.h>
 #include <llvm/Support/VirtualFileSystem.h>
@@ -156,19 +157,76 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
     TargetIs.insert(FTargets.Is.begin(), FTargets.Is.end());
   }
 
+  if (TargetIs.empty()) {
+    report_fatal_error("No target instructions found from target detection");
+  }
+
+  // First remove intrinsics because we may end up adding to the target
+  // instruction set some values that are arguments to stuff like lifetime
+  // management intrinsics.
+  SmallVector<const Instruction *, 32> TargetsToRemove;
+  for (const auto *I : TargetIs) {
+    if (const auto *II = dyn_cast<IntrinsicInst>(I)) {
+      auto IID = II->getIntrinsicID();
+      if (IID == Intrinsic::lifetime_start || IID == Intrinsic::lifetime_end ||
+          IID == Intrinsic::dbg_declare || IID == Intrinsic::dbg_value ||
+          IID == Intrinsic::dbg_label || IID == Intrinsic::dbg_addr) {
+        TargetsToRemove.push_back(I);
+        // add arguments to the intrinsic instruction
+        for (const auto &Op : II->operands()) {
+          if (const auto *OpI = dyn_cast<Instruction>(Op)) {
+            if (!TargetIs.count(OpI)) {
+              // not in the target set, no need to remove it
+              continue;
+            }
+            // we need to make sure that we don't remove instrutions that are
+            // used *also* by other instructions in the target set
+            auto HasNoOtherUser = true;
+            for (const auto *U : OpI->users()) {
+              if (U == II) {
+                continue;
+              }
+              if (const auto *UI = dyn_cast<Instruction>(U)) {
+                if (TargetIs.count(UI)) {
+                  HasNoOtherUser = false;
+                  break;
+                }
+              }
+            }
+            if (HasNoOtherUser) {
+              TargetsToRemove.push_back(OpI);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  for (const auto *I : TargetsToRemove) {
+    TargetIs.erase(I);
+  }
+
   // If the target is a call instruction, with optimization enabled, it may
   // happen that it is the only instruction that corresponds to the target line
   // number (i.e. it's the only instruction in TargetIs). At the same time the
   // SVFG does not contain nodes for call instructions. In this case it's safe
   // to add the arguments to the call to the target instructions set.
+  // The same holds for return instructions.
+  TargetsToRemove.clear();
   SmallVector<const Instruction *, 32> TargetsToAdd;
-  SmallVector<const Instruction *, 32> TargetsToRemove;
   for (const auto *I : TargetIs) {
     if (const auto *CB = dyn_cast<CallBase>(I)) {
       TargetsToRemove.push_back(I);
       for (const auto &Arg : CB->args()) {
         if (const auto *ArgI = dyn_cast<Instruction>(Arg)) {
           TargetsToAdd.push_back(ArgI);
+        }
+      }
+    } else if (const auto *RI = dyn_cast<ReturnInst>(I)) {
+      TargetsToRemove.push_back(I);
+      if (const auto *RV = RI->getReturnValue()) {
+        if (const auto *RVI = dyn_cast<Instruction>(RV)) {
+          TargetsToAdd.push_back(RVI);
         }
       }
     }
@@ -184,18 +242,20 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
   // skip intrinsics and instructions that are not in SVFG
   TargetsToRemove.clear();
   for (const auto *I : TargetIs) {
-    errs() << "AAAAA " << *I << "\n";
-    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-      errs() << "Skipping intrinsic target inst: " << *I << "\n";
-      TargetsToRemove.push_back(I);
-    } else if (auto *BI = dyn_cast<BranchInst>(I)) {
-      errs() << "Skipping branch target inst: " << *I << "\n";
-      TargetsToRemove.push_back(I);
+    if (auto *BI = dyn_cast<BranchInst>(I)) {
+      if (BI->isUnconditional()) {
+        errs() << "Skipping unconditional branch target inst: " << *I << "\n";
+        TargetsToRemove.push_back(I);
+      }
     }
   }
 
   for (const auto *I : TargetsToRemove) {
     TargetIs.erase(I);
+  }
+
+  if (TargetIs.empty()) {
+    report_fatal_error("No target instructions left after filtering");
   }
 
   // track which instructions are present in SVFG
