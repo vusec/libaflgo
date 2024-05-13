@@ -213,7 +213,7 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
   // number (i.e. it's the only instruction in TargetIs). At the same time the
   // SVFG does not contain nodes for call instructions. In this case it's safe
   // to add the arguments to the call to the target instructions set.
-  // The same holds for return instructions.
+  // The same holds for return instructions and conditional branches.
   TargetsToRemove.clear();
   SmallVector<const Instruction *, 32> TargetsToAdd;
   for (const auto *I : TargetIs) {
@@ -229,6 +229,13 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
       if (const auto *RV = RI->getReturnValue()) {
         if (const auto *RVI = dyn_cast<Instruction>(RV)) {
           TargetsToAdd.push_back(RVI);
+        }
+      }
+    } else if (const auto *BI = dyn_cast<BranchInst>(I)) {
+      if (BI->isConditional()) {
+        TargetsToRemove.push_back(I);
+        if (const auto *CI = dyn_cast<Instruction>(BI->getCondition())) {
+          TargetsToAdd.push_back(CI);
         }
       }
     }
