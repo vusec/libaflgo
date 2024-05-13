@@ -86,6 +86,8 @@ USE_HAWKEYE_DISTANCE = "@USE_HAWKEYE_DISTANCE@" == "TRUE"
 TRACE_FUNCTION_DISTANCE = "@TRACE_FUNCTION_DISTANCE@" == "TRUE"
 DAFL_MODE = "@DAFL_MODE@" == "TRUE"
 
+SKIP_TARGETS_CHECK = os.environ.get("AFLGO_SKIP_TARGETS_CHECK", "0") == "1"
+
 
 def check_resource(resource_file):
     if not resource_file.is_file():
@@ -141,6 +143,9 @@ def generate_compiler_flags(targets, is_asm):
     if EXTEND_CALLGRAPH or DAFL_MODE:
         compiler_flags += ["-Xclang", "-no-opaque-pointers"]
 
+    if SKIP_TARGETS_CHECK:
+        compiler_flags += ["-mllvm", "-targets-no-error"]
+
     return compiler_flags
 
 
@@ -189,6 +194,12 @@ def generate_linker_flags():
             "-mllvm",
             "-dafl",
         ]
+
+        if SKIP_TARGETS_CHECK:
+            linker_forward_flags += [
+                "-mllvm",
+                "-dafl-targets-no-error",
+            ]
 
     flags = LINKER_FLAGS[:]
     flags.append(f"-Wl,{','.join(linker_forward_flags)}")
