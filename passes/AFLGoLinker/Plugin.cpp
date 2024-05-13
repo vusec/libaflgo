@@ -1,5 +1,6 @@
 #include <AFLGoLinker/DAFL.hpp>
 #include <AFLGoLinker/DistanceInstrumentation.hpp>
+#include <AFLGoLinker/DuplicateTargetRemoval.hpp>
 #include <AFLGoLinker/FunctionDistanceInstrumentation.hpp>
 #include <AFLGoLinker/TargetInjectionFixup.hpp>
 
@@ -55,6 +56,8 @@ static cl::opt<std::string>
                      cl::value_desc("filename"));
 
 static void addPasses(ModulePassManager &MPM) {
+  MPM.addPass(DuplicateTargetRemovalPass());
+
   if (ClDAFL) {
     MPM.addPass(DAFLInstrumentationPass(ClDAFLOutputFile));
   } else {

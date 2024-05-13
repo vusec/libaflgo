@@ -3,6 +3,7 @@ add_llvm_library(
   MODULE
   DAFL.cpp
   DistanceInstrumentation.cpp
+  DuplicateTargetRemoval.cpp
   TargetInjectionFixup.cpp
   FunctionDistanceInstrumentation.cpp
   Plugin.cpp)
