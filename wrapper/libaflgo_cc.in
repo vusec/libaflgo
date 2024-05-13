@@ -87,6 +87,8 @@ TRACE_FUNCTION_DISTANCE = "@TRACE_FUNCTION_DISTANCE@" == "TRUE"
 DAFL_MODE = "@DAFL_MODE@" == "TRUE"
 
 SKIP_TARGETS_CHECK = os.environ.get("AFLGO_SKIP_TARGETS_CHECK", "0") == "1"
+DAFL_INPUT = os.environ.get("AFLGO_DAFL_INPUT", "")
+DAFL_OUTPUT = os.environ.get("AFLGO_DAFL_OUTPUT", "")
 
 
 def check_resource(resource_file):
@@ -199,6 +201,18 @@ def generate_linker_flags():
             linker_forward_flags += [
                 "-mllvm",
                 "-dafl-targets-no-error",
+            ]
+
+        if len(DAFL_INPUT) > 0:
+            linker_forward_flags += [
+                "-mllvm",
+                f"-dafl-input-file={DAFL_INPUT}",
+            ]
+
+        if len(DAFL_OUTPUT) > 0:
+            linker_forward_flags += [
+                "-mllvm",
+                f"-dafl-output-file={DAFL_OUTPUT}",
             ]
 
     flags = LINKER_FLAGS[:]
