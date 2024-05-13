@@ -375,7 +375,7 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
     auto *LLVMVal = SVFVal ? LLVMModuleSet->getLLVMValue(SVFVal) : nullptr;
     if (auto *I = dyn_cast_or_null<Instruction>(LLVMVal)) {
       // score is proximity to target; higher is better
-      auto Score = MaxDist - KV.second;
+      auto Score = (MaxDist - KV.second) + 1;
       auto *BB = I->getParent();
       auto *R = Res.get();
       if (R->find(BB) == R->end()) {
