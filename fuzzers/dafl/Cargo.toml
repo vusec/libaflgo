@@ -6,7 +6,7 @@ edition = "2021"
 rust-version.workspace = true
 
 [dependencies]
-clap = { version = "4.2.1", features = ["derive"] }
+clap = { version = "~4.4", features = ["derive"] }
 libafl = { workspace = true }
 libafl_targets = { workspace = true, features = [
 	"sancov_pcguard_hitcounts",
