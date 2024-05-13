@@ -274,6 +274,7 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
     auto *NodeVal =
         NodeSVFVal ? LLVMModuleSet->getLLVMValue(NodeSVFVal) : nullptr;
     auto *NodeInst = dyn_cast_or_null<Instruction>(NodeVal);
+    auto *NodeGEP = dyn_cast_or_null<GetElementPtrInst>(NodeVal);
 
     if (NodeInst) {
       for (auto *TargetI : TargetIs) {
@@ -291,6 +292,16 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
          InEdgeIt != InEdgeItEnd; ++InEdgeIt) {
       auto *Edge = *InEdgeIt;
       auto *DefNode = Edge->getSrcNode();
+
+      // thin slicing: skip base pointer dereferences
+      if (NodeGEP) {
+        auto *DefSVFVal = DefNode->getValue();
+        auto *DefVal =
+            DefSVFVal ? LLVMModuleSet->getLLVMValue(DefSVFVal) : nullptr;
+        if (DefVal && DefVal == NodeGEP->getPointerOperand()) {
+          continue;
+        }
+      }
 
       WeightTy Weight = 1;
       if (!NodeInst) {
