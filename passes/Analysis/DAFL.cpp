@@ -37,10 +37,19 @@ struct Edge {
 
 DAFLAnalysis::Result
 DAFLAnalysis::readFromFile(Module &M, std::unique_ptr<MemoryBuffer> &Buffer) {
+  // the input file may come from a compilation with a different optimization
+  // level, basic blocks may have been merged; hence we need to store multiple
+  // scores per basic block
   DenseMap<const BasicBlock *, SmallVector<WeightTy, 8>> Scores;
-  SmallVector<StringRef, 16> Lines;
+
+  SmallVector<StringRef, 64> Lines;
   Buffer->getBuffer().split(Lines, '\n');
-  for (auto Line : Lines) {
+
+  // multiple parallel invocations of the compiler may produce duplicate lines
+  // when writing to the same file
+  SmallSetVector<StringRef, 64> LinesSet(Lines.begin(), Lines.end());
+
+  for (auto Line : LinesSet) {
     if (Line.empty() || Line[0] == '#') {
       continue;
     }
