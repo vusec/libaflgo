@@ -97,6 +97,11 @@ DAFLAnalysis::readFromFile(Module &M, std::unique_ptr<MemoryBuffer> &Buffer) {
     }
 
     if (!FoundBB) {
+      if (NoTargetsNoError) {
+        errs() << "[DAFL] Basic block not found in function " << FnName << ": "
+               << FilePath << ':' << LineNum << '\n';
+        continue;
+      }
       auto Err = formatv("Basic block not found in function '{0}': {1}:{2}",
                          FnName, FilePath, LineNum);
       report_fatal_error(Err);
