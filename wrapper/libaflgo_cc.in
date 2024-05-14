@@ -4,6 +4,7 @@ import sys
 import os
 import subprocess
 from pathlib import Path
+from typing import Optional
 
 # The list of immediate args has been taken from Driver::HandleImmediateArgs
 IMMEDIATE_ARGS = [
@@ -167,7 +168,7 @@ LINKER_FLAGS = [
 ]
 
 
-def generate_linker_flags():
+def generate_linker_flags(linker_output_path: Optional[Path] = None):
     linker_forward_flags = LINKER_FORWARD_FLAGS[:]
 
     if EXTEND_CALLGRAPH or DAFL_MODE:
@@ -204,12 +205,20 @@ def generate_linker_flags():
             ]
 
         if len(DAFL_INPUT) > 0:
+            input_path = Path(DAFL_INPUT)
+            if linker_output_path is not None:
+                input_path = input_path.with_name(
+                    f"{input_path.stem}-{linker_output_path.stem}{input_path.suffix}")
             linker_forward_flags += [
                 "-mllvm",
-                f"-dafl-input-file={DAFL_INPUT}",
+                f"-dafl-input-file={input_path}",
             ]
 
         if len(DAFL_OUTPUT) > 0:
+            output_path = Path(DAFL_OUTPUT)
+            if linker_output_path is not None:
+                output_path = output_path.with_name(
+                    f"{output_path.stem}-{linker_output_path.stem}{output_path.suffix}")
             linker_forward_flags += [
                 "-mllvm",
                 f"-dafl-output-file={DAFL_OUTPUT}",
@@ -274,8 +283,13 @@ def wrapper_main(argv):
 
     is_asm = check_asm(argv[1:])
 
+    output_file = None
     original_args = []
-    for flag in argv[1:]:
+    for i in range(1, len(argv)):
+        flag = argv[i]
+        if flag == "-o":
+            output_file = argv[i + 1]
+
         blacklisted = False
         for blacklisted_regex in ORIGINAL_FLAGS_BLACKLIST:
             if blacklisted_regex.fullmatch(flag) is not None:
@@ -296,7 +310,7 @@ def wrapper_main(argv):
         cmdline += COMPILER_CXX_FLAGS
 
     if is_linking(original_args):
-        cmdline += generate_linker_flags()
+        cmdline += generate_linker_flags(output_file)
         if cpp_mode:
             cmdline += LINKER_CXX_FLAGS
 
