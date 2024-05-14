@@ -163,6 +163,7 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
 
   if (DebugFiles) {
     PAG->dump("pag");
+    outs() << '\n';
   }
 
   auto *Andersen = SVF::AndersenWaveDiff::createAndersenWaveDiff(PAG);
@@ -181,6 +182,7 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
 
   if (DebugFiles) {
     SVFG->dump("svfg");
+    outs() << '\n';
   }
 
   // First remove intrinsics because we may end up adding to the target
