@@ -22,7 +22,8 @@ PreservedAnalyses DAFLInstrumentationPass::run(Module &M,
   }
 
   if (Scores->empty()) {
-    report_fatal_error("[DAFL] unexpected empty scores map");
+    errs() << "[DAFL] empty scores map\n";
+    return PreservedAnalyses::all();
   }
 
   std::unique_ptr<raw_fd_ostream> Out = nullptr;
