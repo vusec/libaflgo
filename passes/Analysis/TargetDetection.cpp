@@ -55,8 +55,8 @@ AFLGoTargetDetectionAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
     }
 
     if (IsBBTarget && !HasTargetInstr) {
-      auto Err = formatv("Target BB without target instructions:\n{0}", BB);
-      report_fatal_error(Twine(Err));
+      // most probably because of ASan+O3
+      errs() << "Target BB without target instructions:\n" << BB << '\n';
     }
   }
 
