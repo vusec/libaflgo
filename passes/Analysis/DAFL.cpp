@@ -138,6 +138,7 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
       report_fatal_error(ErrorMessage);
     }
 
+    errs() << "[DAFL] input file: " << InputFile << '\n';
     return readFromFile(M, *BufferOrErr);
   }
 
