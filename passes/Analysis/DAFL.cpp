@@ -36,7 +36,7 @@ struct Edge {
 
 DAFLAnalysis::Result
 DAFLAnalysis::readFromFile(Module &M, std::unique_ptr<MemoryBuffer> &Buffer) {
-  Result Res = Result::value_type();
+  DenseMap<const BasicBlock *, SmallVector<WeightTy, 8>> Scores;
   SmallVector<StringRef, 16> Lines;
   Buffer->getBuffer().split(Lines, '\n');
   for (auto Line : Lines) {
@@ -82,13 +82,13 @@ DAFLAnalysis::readFromFile(Module &M, std::unique_ptr<MemoryBuffer> &Buffer) {
 
       if (FilePath.compare(RealPath) == 0 && LineNum == Loc->getLine()) {
         auto *BB = I.getParent();
-        if (Res->find(BB) == Res->end()) {
-          Res->insert({BB, Score});
+        auto BBScores = Scores.find(BB);
+        if (BBScores == Scores.end()) {
+          Scores[BB] = {Score};
         } else {
-          auto Err =
-              formatv("Duplicate score for basic block '{0}' in function '{1}'",
-                      BB->getName(), FnName);
-          report_fatal_error(Err);
+          BBScores->second.push_back(Score);
+          errs() << "[DAFL] Multiple scores for basic block '" << BB->getName()
+                 << "' in function '" << FnName << "'\n";
         }
 
         FoundBB = true;
@@ -97,15 +97,22 @@ DAFLAnalysis::readFromFile(Module &M, std::unique_ptr<MemoryBuffer> &Buffer) {
     }
 
     if (!FoundBB) {
-      if (NoTargetsNoError) {
-        errs() << "[DAFL] Basic block not found in function " << FnName << ": "
-               << FilePath << ':' << LineNum << '\n';
-        continue;
-      }
       auto Err = formatv("Basic block not found in function '{0}': {1}:{2}",
                          FnName, FilePath, LineNum);
+      if (NoTargetsNoError) {
+        errs() << "[DAFL] " << Err << '\n';
+        continue;
+      }
       report_fatal_error(Err);
     }
+  }
+
+  Result Res = Result::value_type();
+  for (auto &BBScores : Scores) {
+    auto *BB = BBScores.first;
+    auto &Scores = BBScores.second;
+    auto MaxScore = *std::max_element(Scores.begin(), Scores.end());
+    Res->insert({BB, MaxScore});
   }
   return Res;
 }
