@@ -209,6 +209,9 @@ def generate_linker_flags(linker_output_path: Optional[Path] = None):
             if linker_output_path is not None:
                 input_path = input_path.with_name(
                     f"{input_path.stem}-{linker_output_path.stem}{input_path.suffix}")
+                if not input_path.exists():
+                    input_path = Path(DAFL_INPUT)
+
             linker_forward_flags += [
                 "-mllvm",
                 f"-dafl-input-file={input_path}",
@@ -219,9 +222,10 @@ def generate_linker_flags(linker_output_path: Optional[Path] = None):
             if linker_output_path is not None:
                 output_path = output_path.with_name(
                     f"{output_path.stem}-{linker_output_path.stem}{output_path.suffix}")
+
             linker_forward_flags += [
                 "-mllvm",
-                f"-dafl-output-file={DAFL_OUTPUT}",
+                f"-dafl-output-file={output_path}",
             ]
 
     flags = LINKER_FLAGS[:]
@@ -288,7 +292,7 @@ def wrapper_main(argv):
     for i in range(1, len(argv)):
         flag = argv[i]
         if flag == "-o":
-            output_file = argv[i + 1]
+            output_file = Path(argv[i + 1])
 
         blacklisted = False
         for blacklisted_regex in ORIGINAL_FLAGS_BLACKLIST:
