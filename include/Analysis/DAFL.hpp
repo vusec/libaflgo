@@ -16,9 +16,10 @@ public:
   // optional because we might not have target instructions
   using Result = Optional<DenseMap<const BasicBlock *, WeightTy>>;
 
-  DAFLAnalysis(std::string InputFile, bool NoTargetsNoError, bool DebugFiles)
+  DAFLAnalysis(std::string InputFile, bool NoTargetsNoError, bool DebugFiles,
+               bool Verbose)
       : InputFile(InputFile), NoTargetsNoError(NoTargetsNoError),
-        DebugFiles(DebugFiles) {}
+        DebugFiles(DebugFiles), Verbose(Verbose) {}
 
   Result run(Module &M, ModuleAnalysisManager &);
 
@@ -28,6 +29,7 @@ private:
   std::string InputFile;
   bool NoTargetsNoError;
   bool DebugFiles;
+  bool Verbose;
 };
 
 } // namespace llvm

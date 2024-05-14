@@ -88,8 +88,6 @@ DAFLAnalysis::readFromFile(Module &M, std::unique_ptr<MemoryBuffer> &Buffer) {
           Scores[BB] = {Score};
         } else {
           BBScores->second.push_back(Score);
-          errs() << "[DAFL] Multiple scores for basic block '" << BB->getName()
-                 << "' in function '" << FnName << "'\n";
         }
 
         FoundBB = true;
@@ -101,7 +99,9 @@ DAFLAnalysis::readFromFile(Module &M, std::unique_ptr<MemoryBuffer> &Buffer) {
       auto Err = formatv("Basic block not found in function '{0}': {1}:{2}",
                          FnName, FilePath, LineNum);
       if (NoTargetsNoError) {
-        errs() << "[DAFL] " << Err << '\n';
+        if (Verbose) {
+          errs() << "[DAFL] " << Err << '\n';
+        }
         continue;
       }
       report_fatal_error(Err);
@@ -146,6 +146,10 @@ DAFLAnalysis::Result DAFLAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
     }
     report_fatal_error("No target instructions found from target detection");
   }
+
+  // Enable SVF debug output if requested
+  auto &PrintOption = const_cast<Option<bool> &>(SVF::Options::PStat);
+  PrintOption.setValue(Verbose || DebugFiles);
 
   auto *LLVMModuleSet = SVF::LLVMModuleSet::getLLVMModuleSet();
   auto *SVFModule = LLVMModuleSet->buildSVFModule(M);

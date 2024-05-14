@@ -28,6 +28,11 @@ static cl::opt<bool>
                 cl::desc("Save debug files for DAFL instrumentation"),
                 cl::init(false));
 
+static cl::opt<bool>
+    ClDAFLVerbose("dafl-verbose",
+                  "Enable verbose output for DAFL instrumentation",
+                  cl::init(false));
+
 class AFLGoFunctionDistancePrinterPass
     : public PassInfoMixin<AFLGoFunctionDistancePrinterPass> {
   raw_ostream &OS;
@@ -144,7 +149,9 @@ llvm::PassPluginLibraryInfo getAFLGoAnalysisPrinterPluginInfo() {
           });
           MAM.registerPass(
               [] { return AFLGoBasicBlockDistanceAnalysis(ClExtendCG); });
-          MAM.registerPass([] { return DAFLAnalysis("", false, ClDAFLDebug); });
+          MAM.registerPass([] {
+            return DAFLAnalysis("", false, ClDAFLDebug, ClDAFLVerbose);
+          });
         });
 
         PB.registerPipelineParsingCallback(

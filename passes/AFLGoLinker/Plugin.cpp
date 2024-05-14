@@ -45,6 +45,11 @@ static cl::opt<bool>
                 cl::desc("Save debug files for DAFL instrumentation"),
                 cl::init(false));
 
+static cl::opt<bool>
+    ClDAFLVerbose("dafl-verbose",
+                  "Enable verbose output for DAFL instrumentation",
+                  cl::init(false));
+
 static cl::opt<std::string>
     ClDAFLInputFile("dafl-input-file",
                     cl::desc("Input file for DAFL analysis results"),
@@ -87,7 +92,7 @@ llvm::PassPluginLibraryInfo getAFLGoLinkerPluginInfo() {
         PB.registerAnalysisRegistrationCallback([](ModuleAnalysisManager &MAM) {
           MAM.registerPass([] {
             return DAFLAnalysis(ClDAFLInputFile, ClDAFLNoTargetsNoError,
-                                ClDAFLDebug);
+                                ClDAFLDebug, ClDAFLVerbose);
           });
           MAM.registerPass([] { return ExtendedCallGraphAnalysis(); });
           MAM.registerPass([] {
