@@ -12,6 +12,7 @@
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringMap.h>
 #include <llvm/ADT/StringRef.h>
+#include <llvm/ADT/StringSet.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Instructions.h>
@@ -48,7 +49,11 @@ DAFLAnalysis::readFromFile(Module &M, std::unique_ptr<MemoryBuffer> &Buffer) {
   // same target library (i.e. specified target locations are in the library);
   // in this case make sure to use a unique DAFL file for each linker
   // invocation.
-  StringMap<std::pair<StringRef, SmallVector<WeightTy>>> LineToScores;
+
+  // A single line can have multiple function names for cloned functions.
+
+  // Map from file:line to function names and scores.
+  StringMap<std::pair<StringSet<>, SmallVector<WeightTy>>> LineToScores;
 
   for (auto &Line : AllLines) {
     if (Line.empty() || Line[0] == '#') {
@@ -69,91 +74,71 @@ DAFLAnalysis::readFromFile(Module &M, std::unique_ptr<MemoryBuffer> &Buffer) {
 
     auto LS = LineToScores.find(FileLine);
     if (LS == LineToScores.end()) {
-      LineToScores[FileLine] = {FnName, {Score}};
+      LineToScores[FileLine] = {{FnName}, {Score}};
       continue;
     }
 
     auto &LSV = LS->getValue();
-    if (LSV.first != FnName) {
-      // can happen if inlining is enabled
-      auto Err = formatv(
-          "Function name mismatch for line '{0}': expected '{1}' but got '{2}'",
-          FileLine, LSV.first, FnName);
-      report_fatal_error(Err);
+    auto &LineFnNames = LSV.first;
+    auto &LineScores = LSV.second;
+
+    auto NewFnName = LineFnNames.insert(FnName).second;
+    if (Verbose && NewFnName && LineFnNames.size() > 1) {
+      // Static inline functions defined in header files may be cloned.
+      // Otherwise, you might have inlining turned on.
+      errs() << "[DAFL] Multiple functions for line " << FileLine << ": "
+             << FnName << '\n';
     }
 
-    LSV.second.push_back(Score);
+    LineScores.push_back(Score);
   }
+
+  DenseMap<const BasicBlock *, WeightTy> Res;
 
   // The input file may come from a compilation with a different optimization
   // level, basic blocks may have been split (e.g. LICM may move instructions
-  // out of a BB); hence we need to store multiple scores per basic block.
-  DenseMap<const BasicBlock *, SmallVector<WeightTy>> BBToScores;
+  // out of a BB); hence there might be multiple scores per basic block. We keep
+  // the maximum.
 
-  for (auto &LS : LineToScores) {
-    auto &FnName = LS.getValue().first;
-    auto Scores = LS.getValue().second;
-    auto Score = *std::max_element(Scores.begin(), Scores.end());
+  // Keep track of seen file:line for each basic block to avoid counting the
+  // same score multiple times.
+  StringSet<> BBFileLines;
 
-    auto FileLine = LS.getKey().split(':');
-    auto FilePath = FileLine.first;
-    auto LineNum = std::stoi(FileLine.second.str());
+  for (auto &F : M) {
+    for (auto &BB : F) {
+      WeightTy MaxScore = 0;
+      BBFileLines.clear();
 
-    auto *F = M.getFunction(FnName);
-    if (!F || F->isDeclaration()) {
-      if (NoTargetsNoError) {
-        continue;
-      }
-      auto Err = formatv("Function '{0}' not found in module", FnName);
-      report_fatal_error(Err);
-    }
-
-    auto FoundBB = false;
-    for (auto &I : instructions(*F)) {
-      auto *Loc = I.getDebugLoc().get();
-      if (!Loc || Loc->getFilename().empty() || Loc->getLine() == 0) {
-        continue;
-      }
-
-      auto AbsolutePath = SmallString<128>(Loc->getFilename());
-      sys::fs::make_absolute(Loc->getDirectory(), AbsolutePath);
-      auto RealPath = SmallString<128>();
-      sys::fs::real_path(AbsolutePath, RealPath);
-
-      if (FilePath.compare(RealPath) == 0 && LineNum == Loc->getLine()) {
-        auto *BB = I.getParent();
-        auto BBScores = BBToScores.find(BB);
-        if (BBScores == BBToScores.end()) {
-          BBToScores[BB] = {Score};
-        } else {
-          BBScores->second.push_back(Score);
+      for (auto &I : BB) {
+        auto *Loc = I.getDebugLoc().get();
+        if (!Loc || Loc->getFilename().empty() || Loc->getLine() == 0) {
+          continue;
         }
 
-        FoundBB = true;
-        break;
-      }
-    }
+        auto AbsolutePath = SmallString<128>(Loc->getFilename());
+        sys::fs::make_absolute(Loc->getDirectory(), AbsolutePath);
+        auto RealPath = SmallString<128>();
+        sys::fs::real_path(AbsolutePath, RealPath);
 
-    if (!FoundBB) {
-      auto Err = formatv("Basic block not found in function '{0}': {1}:{2}",
-                         FnName, FilePath, LineNum);
-      if (NoTargetsNoError) {
-        if (Verbose) {
-          errs() << "[DAFL] " << Err << '\n';
+        auto FileLine = SmallString<256>(RealPath);
+        FileLine += ':' + std::to_string(Loc->getLine());
+
+        auto LS = LineToScores.find(FileLine);
+        if (LS != LineToScores.end() && BBFileLines.insert(FileLine).second) {
+          auto &Scores = LS->second.second;
+          auto Score = *std::max_element(Scores.begin(), Scores.end());
+          if (Score > MaxScore) {
+            MaxScore = Score;
+          }
         }
-        continue;
       }
-      report_fatal_error(Err);
+
+      if (MaxScore > 0) {
+        Res[&BB] = MaxScore;
+      }
     }
   }
 
-  Result Res = Result::value_type();
-  for (auto &BBScores : BBToScores) {
-    auto *BB = BBScores.first;
-    auto &Scores = BBScores.second;
-    auto MaxScore = *std::max_element(Scores.begin(), Scores.end());
-    (*Res)[BB] = MaxScore;
-  }
   return Res;
 }
 
