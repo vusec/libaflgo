@@ -10,6 +10,8 @@
 
 #include <llvm/ADT/SmallSet.h>
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/ADT/StringMap.h>
+#include <llvm/ADT/StringRef.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Instructions.h>
@@ -37,19 +39,18 @@ struct Edge {
 
 DAFLAnalysis::Result
 DAFLAnalysis::readFromFile(Module &M, std::unique_ptr<MemoryBuffer> &Buffer) {
-  // the input file may come from a compilation with a different optimization
-  // level, basic blocks may have been merged; hence we need to store multiple
-  // scores per basic block
-  DenseMap<const BasicBlock *, SmallVector<WeightTy, 8>> Scores;
+  SmallVector<StringRef, 0> AllLines;
+  Buffer->getBuffer().split(AllLines, '\n');
 
-  SmallVector<StringRef, 64> Lines;
-  Buffer->getBuffer().split(Lines, '\n');
+  // The input file may contain multiple scores for the same file:line. This can
+  // happen for example with ternary operators written in a single line. It
+  // could also happen when linking multiple programs in parallel against the
+  // same target library (i.e. specified target locations are in the library);
+  // in this case make sure to use a unique DAFL file for each linker
+  // invocation.
+  StringMap<std::pair<StringRef, SmallVector<WeightTy>>> LineToScores;
 
-  // multiple parallel invocations of the compiler may produce duplicate lines
-  // when writing to the same file
-  SmallSetVector<StringRef, 64> LinesSet(Lines.begin(), Lines.end());
-
-  for (auto Line : LinesSet) {
+  for (auto &Line : AllLines) {
     if (Line.empty() || Line[0] == '#') {
       continue;
     }
@@ -64,6 +65,39 @@ DAFLAnalysis::readFromFile(Module &M, std::unique_ptr<MemoryBuffer> &Buffer) {
 
     auto Score = std::stoull(LineSplit[0].str());
     auto FnName = LineSplit[1];
+    auto FileLine = LineSplit[2];
+
+    auto LS = LineToScores.find(FileLine);
+    if (LS == LineToScores.end()) {
+      LineToScores[FileLine] = {FnName, {Score}};
+      continue;
+    }
+
+    auto &LSV = LS->getValue();
+    if (LSV.first != FnName) {
+      // can happen if inlining is enabled
+      auto Err = formatv(
+          "Function name mismatch for line '{0}': expected '{1}' but got '{2}'",
+          FileLine, LSV.first, FnName);
+      report_fatal_error(Err);
+    }
+
+    LSV.second.push_back(Score);
+  }
+
+  // The input file may come from a compilation with a different optimization
+  // level, basic blocks may have been split (e.g. LICM may move instructions
+  // out of a BB); hence we need to store multiple scores per basic block.
+  DenseMap<const BasicBlock *, SmallVector<WeightTy>> BBToScores;
+
+  for (auto &LS : LineToScores) {
+    auto &FnName = LS.getValue().first;
+    auto Scores = LS.getValue().second;
+    auto Score = *std::max_element(Scores.begin(), Scores.end());
+
+    auto FileLine = LS.getKey().split(':');
+    auto FilePath = FileLine.first;
+    auto LineNum = std::stoi(FileLine.second.str());
 
     auto *F = M.getFunction(FnName);
     if (!F || F->isDeclaration()) {
@@ -73,10 +107,6 @@ DAFLAnalysis::readFromFile(Module &M, std::unique_ptr<MemoryBuffer> &Buffer) {
       auto Err = formatv("Function '{0}' not found in module", FnName);
       report_fatal_error(Err);
     }
-
-    auto FileLine = LineSplit[2].split(':');
-    auto FilePath = FileLine.first;
-    auto LineNum = std::stoi(FileLine.second.str());
 
     auto FoundBB = false;
     for (auto &I : instructions(*F)) {
@@ -92,9 +122,9 @@ DAFLAnalysis::readFromFile(Module &M, std::unique_ptr<MemoryBuffer> &Buffer) {
 
       if (FilePath.compare(RealPath) == 0 && LineNum == Loc->getLine()) {
         auto *BB = I.getParent();
-        auto BBScores = Scores.find(BB);
-        if (BBScores == Scores.end()) {
-          Scores[BB] = {Score};
+        auto BBScores = BBToScores.find(BB);
+        if (BBScores == BBToScores.end()) {
+          BBToScores[BB] = {Score};
         } else {
           BBScores->second.push_back(Score);
         }
@@ -118,11 +148,11 @@ DAFLAnalysis::readFromFile(Module &M, std::unique_ptr<MemoryBuffer> &Buffer) {
   }
 
   Result Res = Result::value_type();
-  for (auto &BBScores : Scores) {
+  for (auto &BBScores : BBToScores) {
     auto *BB = BBScores.first;
     auto &Scores = BBScores.second;
     auto MaxScore = *std::max_element(Scores.begin(), Scores.end());
-    Res->insert({BB, MaxScore});
+    (*Res)[BB] = MaxScore;
   }
   return Res;
 }
