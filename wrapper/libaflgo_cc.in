@@ -143,11 +143,11 @@ def generate_compiler_flags(targets, is_asm):
     if not is_asm:
         compiler_flags += ["-mllvm", f"-targets={targets}"]
 
+        if SKIP_TARGETS_CHECK:
+            compiler_flags += ["-mllvm", "-targets-no-error"]
+
     if EXTEND_CALLGRAPH or DAFL_MODE:
         compiler_flags += ["-Xclang", "-no-opaque-pointers"]
-
-    if SKIP_TARGETS_CHECK:
-        compiler_flags += ["-mllvm", "-targets-no-error"]
 
     return compiler_flags
 
