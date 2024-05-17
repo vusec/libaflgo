@@ -170,8 +170,9 @@ impl DAFLMetadata {
             return false;
         }
 
-        if let Some(min_relevance) = self.min_relevance {
-            cur_relevance > min_relevance
+        // We want to maximize the relevance.
+        if let Some(max_relevance) = self.max_relevance {
+            cur_relevance > max_relevance
         } else {
             true
         }
