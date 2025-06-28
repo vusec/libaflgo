@@ -1,6 +1,6 @@
 # LibAFLGo
 
-<img src="logo.png", width="250", align="right" />
+<img src="logo.png" width="250" align="right" />
 
 > This is the main repository for the paper _LibAFLGo: Evaluating and Advancing Directed Greybox
 > Fuzzing_. We are in the process of upstreaming LibAFLGo to LibAFL.
