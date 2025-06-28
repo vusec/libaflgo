@@ -2,8 +2,7 @@
 
 <img src="logo.png" width="250" align="right" />
 
-> This is the main repository for the paper _LibAFLGo: Evaluating and Advancing Directed Greybox
-> Fuzzing_. We are in the process of upstreaming LibAFLGo to LibAFL.
+Main repository for the paper _LibAFLGo: Evaluating and Advancing Directed Greybox Fuzzing_.
 
 LibAFLGo extends [LibAFL](https://github.com/AFLplusplus/LibAFL) for directed fuzzing. It
 re-implements three directed fuzzing policies in a modular fashion: AFLGo, Hawkeye, and DAFL. The
@@ -15,6 +14,8 @@ The research artifacts are split across three repositories:
 - this repository contains directed fuzzing extensions for LibAFL, re-implemented fuzzers
 - [MAGMA-directed](https://github.com/vusec/magma-directed) extends MAGMA for directed fuzzing
 - [LibAFL-directed](https://github.com/vusec/LibAFL-directed) contains minor patches to LibAFL
+
+We aim to upstream LibAFLGo to LibAFL.
 
 ## Project Structure
 
