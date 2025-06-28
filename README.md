@@ -1,8 +1,9 @@
 # LibAFLGo
 
-<img src="logo.png" width="250" align="right" />
+<img src="logo.png" width="340" align="right" />
 
-Main repository for the paper _LibAFLGo: Evaluating and Advancing Directed Greybox Fuzzing_.
+_LibAFLGo: Evaluating and Advancing Directed Greybox Fuzzing_
+(<a href="https://download.vusec.net/papers/libaflgo_eurosp25.pdf" target="_blank">paper</a>).
 
 LibAFLGo extends [LibAFL](https://github.com/AFLplusplus/LibAFL) for directed fuzzing. It
 re-implements three directed fuzzing policies in a modular fashion: AFLGo, Hawkeye, and DAFL. The
