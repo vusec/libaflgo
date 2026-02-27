@@ -9,7 +9,7 @@ include(FetchContent)
 FetchContent_Declare(
   Corrosion
   GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
-  GIT_TAG v0.3.5)
+  GIT_TAG v0.5.2)
 FetchContent_Declare(
   Z3
   URL https://github.com/Z3Prover/z3/releases/download/z3-4.8.12/z3-4.8.12-x64-glibc-2.31.zip
