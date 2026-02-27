@@ -58,6 +58,7 @@ We aim to upstream LibAFLGo to LibAFL.
 
 You can use `cmake` to build LLVM passes and LibAFL components. After opening the project in our devcontainer with your editor (we recommend VSCode), you can build the project with the following commands:
 
+```
 cmake -S /workspaces/libaflgo \
       -B /workspaces/libaflgo/build \
       -G Ninja \
@@ -67,10 +68,12 @@ cmake -S /workspaces/libaflgo \
       -DCMAKE_CXX_COMPILER=/usr/bin/clang++-15 \
       -DBUILD_TESTING=ON \
       --no-warn-unused-cli
+
 cmake --build /workspaces/libaflgo/build \
       --config RelWithDebInfo \
       --target all \
       --
+```
 
 You can then run the tests with the check target
 
