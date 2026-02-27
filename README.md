@@ -56,13 +56,25 @@ We aim to upstream LibAFLGo to LibAFL.
 
 ## Building
 
-You can use `cmake` to build LLVM passes and LibAFL components:
+You can use `cmake` to build LLVM passes and LibAFL components. After opening the project in our devcontainer with your editor (we recommend VSCode), you can build the project with the following commands:
 
-```bash
-cmake --build build --config RelWithDebInfo
-```
+cmake -S /workspaces/libaflgo \
+      -B /workspaces/libaflgo/build \
+      -G Ninja \
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+      -DCMAKE_EXPORT_COMPILE_COMMANDS=TRUE \
+      -DCMAKE_C_COMPILER=/usr/bin/clang-15 \
+      -DCMAKE_CXX_COMPILER=/usr/bin/clang++-15 \
+      -DBUILD_TESTING=ON \
+      --no-warn-unused-cli
+cmake --build /workspaces/libaflgo/build \
+      --config RelWithDebInfo \
+      --target all \
+      --
 
-## MAGMA Integration
+You can then run the tests with the check target
+
+## MAGMA Integration (mileage may vary, as this was not tested recently)
 
 We extended [MAGMA](https://github.com/vusec/magma-directed) for directed fuzzing. The original
 documentation applies also to our fork. The easiest way to get up and running to fuzz targets is to
