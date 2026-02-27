@@ -8,7 +8,8 @@ members = [
     "fuzzers/dafl",
 ]
 default-members = ["libaflgo_targets", "libaflgo"]
-package.rust-version = "1.71"
+package.rust-version = "1.88"
+resolver = "3"
 
 [workspace.dependencies]
 # LibAFL version 0.10.1
