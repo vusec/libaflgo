@@ -18,9 +18,7 @@ FetchContent_Declare(
   SVF
   GIT_REPOSITORY https://github.com/SVF-tools/SVF.git
   GIT_TAG 0e9dabd9478f4f638cc54ecfeb3ba2191e7eab33 # June 8th, 2023
-  # XXX: fails re-configuring, `cd build/_deps/svf-src && git restore . && cd -` and retry
-  PATCH_COMMAND git apply "${CMAKE_CURRENT_SOURCE_DIR}/SVF-1282.patch"
-)
+  PATCH_COMMAND git reset --hard && git apply "${CMAKE_CURRENT_SOURCE_DIR}/SVF-1282.patch")
 FetchContent_MakeAvailable(Corrosion Z3)
 
 # SVF picks up Z3_LIBRARIES from LLVM, so import Z3 before LLVM.
